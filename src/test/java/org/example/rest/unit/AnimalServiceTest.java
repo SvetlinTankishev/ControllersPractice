@@ -1,6 +1,6 @@
 package org.example.rest.unit;
 
-import org.example.entity.Animal;
+import org.example.models.entity.Animal;
 import org.example.service.AnimalService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;

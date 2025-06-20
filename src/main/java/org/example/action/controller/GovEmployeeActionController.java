@@ -1,7 +1,7 @@
 package org.example.action.controller;
 
-import org.example.entity.GovEmployee;
-import org.example.dto.GovEmployeeDto;
+import org.example.models.entity.GovEmployee;
+import org.example.models.dto.GovEmployeeDto;
 import org.example.service.GovEmployeeService;
 import org.springframework.web.bind.annotation.*;
 import java.util.List;
@@ -48,5 +48,10 @@ public class GovEmployeeActionController {
     @GetMapping("/search")
     public List<GovEmployee> searchEmployees(@RequestParam(required = false) String name) {
         return govEmployeeService.searchByName(name);
+    }
+
+    @GetMapping("/page")
+    public List<GovEmployee> getEmployeesPage(@RequestParam int page, @RequestParam int size) {
+        return govEmployeeService.getPage(page, size);
     }
 } 

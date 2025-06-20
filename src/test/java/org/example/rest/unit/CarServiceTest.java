@@ -1,6 +1,6 @@
 package org.example.rest.unit;
 
-import org.example.entity.Car;
+import org.example.models.entity.Car;
 import org.example.service.CarService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;

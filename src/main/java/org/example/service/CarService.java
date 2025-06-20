@@ -1,6 +1,6 @@
 package org.example.service;
 
-import org.example.entity.Car;
+import org.example.models.entity.Car;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -35,5 +35,12 @@ public class CarService {
             }
         }
         return result;
+    }
+    public List<Car> getPage(int page, int size) {
+        if (size <= 0) return new ArrayList<>();
+        int from = Math.max(0, page * size);
+        int to = Math.min(cars.size(), from + size);
+        if (from >= cars.size()) return new ArrayList<>();
+        return cars.subList(from, to);
     }
 } 

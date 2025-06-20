@@ -1,4 +1,4 @@
-package org.example.entity;
+package org.example.models.entity;
 
 public class GovEmployee {
     private Long id;

@@ -1,7 +1,7 @@
 package org.example.rest.controller;
 
-import org.example.entity.Car;
-import org.example.dto.CarDto;
+import org.example.models.entity.Car;
+import org.example.models.dto.CarDto;
 import org.example.service.CarService;
 import org.springframework.web.bind.annotation.*;
 import java.util.List;
@@ -48,5 +48,10 @@ public class CarRestController {
     @GetMapping("/search")
     public List<Car> searchCars(@RequestParam(required = false) String brand) {
         return carService.searchByBrand(brand);
+    }
+
+    @GetMapping("/page")
+    public List<Car> getCarsPage(@RequestParam int page, @RequestParam int size) {
+        return carService.getPage(page, size);
     }
 } 

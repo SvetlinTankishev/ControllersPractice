@@ -1,7 +1,7 @@
 package org.example.rest.controller;
 
-import org.example.entity.Animal;
-import org.example.dto.AnimalDto;
+import org.example.models.entity.Animal;
+import org.example.models.dto.AnimalDto;
 import org.example.service.AnimalService;
 import org.springframework.web.bind.annotation.*;
 import java.util.List;
@@ -48,5 +48,10 @@ public class AnimalRestController {
     @GetMapping("/search")
     public List<Animal> searchAnimals(@RequestParam(required = false) String type) {
         return animalService.searchByType(type);
+    }
+
+    @GetMapping("/page")
+    public List<Animal> getAnimalsPage(@RequestParam int page, @RequestParam int size) {
+        return animalService.getPage(page, size);
     }
 } 

@@ -1,6 +1,6 @@
 package org.example.service;
 
-import org.example.entity.Animal;
+import org.example.models.entity.Animal;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -35,5 +35,12 @@ public class AnimalService {
             }
         }
         return result;
+    }
+    public List<Animal> getPage(int page, int size) {
+        if (size <= 0) return new ArrayList<>();
+        int from = Math.max(0, page * size);
+        int to = Math.min(animals.size(), from + size);
+        if (from >= animals.size()) return new ArrayList<>();
+        return animals.subList(from, to);
     }
 } 

@@ -1,6 +1,6 @@
 package org.example.action.unit;
 
-import org.example.entity.GovEmployee;
+import org.example.models.entity.GovEmployee;
 import org.example.service.GovEmployeeService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;

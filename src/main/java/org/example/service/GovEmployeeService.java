@@ -1,6 +1,6 @@
 package org.example.service;
 
-import org.example.entity.GovEmployee;
+import org.example.models.entity.GovEmployee;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -35,5 +35,12 @@ public class GovEmployeeService {
             }
         }
         return result;
+    }
+    public List<GovEmployee> getPage(int page, int size) {
+        if (size <= 0) return new ArrayList<>();
+        int from = Math.max(0, page * size);
+        int to = Math.min(employees.size(), from + size);
+        if (from >= employees.size()) return new ArrayList<>();
+        return employees.subList(from, to);
     }
 } 

@@ -1,4 +1,4 @@
-package org.example.dto;
+package org.example.models.dto;
 
 public class GovEmployeeDto {
     private String name;
