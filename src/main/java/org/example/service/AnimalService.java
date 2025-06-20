@@ -1,6 +1,6 @@
-package org.example.rest.service;
+package org.example.service;
 
-import org.example.rest.entity.Animal;
+import org.example.entity.Animal;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicLong;
 

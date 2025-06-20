@@ -1,6 +1,6 @@
-package org.example.rest.service;
+package org.example.service;
 
-import org.example.rest.entity.GovEmployee;
+import org.example.entity.GovEmployee;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicLong;
 

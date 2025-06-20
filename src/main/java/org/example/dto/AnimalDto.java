@@ -1,9 +1,7 @@
-package org.example.rest.dto;
+package org.example.dto;
 
 public class AnimalDto {
     private String type;
-    public AnimalDto() {}
-    public AnimalDto(String type) { this.type = type; }
     public String getType() { return type; }
     public void setType(String type) { this.type = type; }
 } 

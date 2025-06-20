@@ -1,4 +1,4 @@
-package org.example.action.entity;
+package org.example.entity;
 
 public class Car {
     private Long id;

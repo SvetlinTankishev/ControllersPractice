@@ -1,6 +1,6 @@
-package org.example.action.service;
+package org.example.service;
 
-import org.example.action.entity.Car;
+import org.example.entity.Car;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicLong;
 

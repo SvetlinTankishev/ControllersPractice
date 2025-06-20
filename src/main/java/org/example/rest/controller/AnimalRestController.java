@@ -1,10 +1,11 @@
 package org.example.rest.controller;
 
-import org.example.rest.entity.Animal;
-import org.example.rest.dto.AnimalDto;
-import org.example.rest.service.AnimalService;
+import org.example.entity.Animal;
+import org.example.dto.AnimalDto;
+import org.example.service.AnimalService;
 import org.springframework.web.bind.annotation.*;
-import java.util.*;
+import java.util.List;
+import java.util.NoSuchElementException;
 
 @RestController
 @RequestMapping("/api/animals")
