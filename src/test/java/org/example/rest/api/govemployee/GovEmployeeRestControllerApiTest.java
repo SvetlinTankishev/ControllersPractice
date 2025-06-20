@@ -18,4 +18,18 @@ public class GovEmployeeRestControllerApiTest {
         mockMvc.perform(get("/api/gov-employees"))
                 .andExpect(status().isOk());
     }
+
+    @Test
+    void searchEmployees_byName_returnsFiltered() throws Exception {
+        // Add a new employee
+        mockMvc.perform(post("/api/gov-employees")
+                .contentType("application/json")
+                .content("{\"name\":\"Charlie\"}"))
+                .andExpect(status().isOk());
+
+        // Search for 'Charlie'
+        mockMvc.perform(get("/api/gov-employees/search?name=Charlie"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].name").value("Charlie"));
+    }
 } 

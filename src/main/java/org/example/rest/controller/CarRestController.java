@@ -33,4 +33,20 @@ public class CarRestController {
     public void deleteCar(@PathVariable Long id) {
         carService.delete(id);
     }
+
+    @PatchMapping("/{id}")
+    public Car patchCar(@PathVariable Long id, @RequestBody CarDto dto) {
+        Car car = carService.getById(id);
+        if (car == null) throw new NoSuchElementException("Car not found");
+        if (dto.getBrand() != null) {
+            car.setBrand(dto.getBrand());
+        }
+        // In a real app, persist the change here
+        return car;
+    }
+
+    @GetMapping("/search")
+    public List<Car> searchCars(@RequestParam(required = false) String brand) {
+        return carService.searchByBrand(brand);
+    }
 } 

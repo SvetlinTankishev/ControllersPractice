@@ -18,4 +18,34 @@ public class AnimalRestControllerApiTest {
         mockMvc.perform(get("/api/animals"))
                 .andExpect(status().isOk());
     }
+
+    @Test
+    void patchAnimal_updatesType() throws Exception {
+        // Add a new animal first
+        mockMvc.perform(post("/api/animals")
+                .contentType("application/json")
+                .content("{\"type\":\"lion\"}"))
+                .andExpect(status().isOk());
+
+        // Patch the animal with id 3 (since 1 and 2 are created by default)
+        mockMvc.perform(patch("/api/animals/3")
+                .contentType("application/json")
+                .content("{\"type\":\"tiger\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.type").value("tiger"));
+    }
+
+    @Test
+    void searchAnimals_byType_returnsFiltered() throws Exception {
+        // Add a new animal
+        mockMvc.perform(post("/api/animals")
+                .contentType("application/json")
+                .content("{\"type\":\"lion\"}"))
+                .andExpect(status().isOk());
+
+        // Search for 'lion'
+        mockMvc.perform(get("/api/animals/search?type=lion"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].type").value("lion"));
+    }
 } 

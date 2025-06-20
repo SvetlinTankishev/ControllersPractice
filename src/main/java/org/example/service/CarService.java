@@ -25,4 +25,15 @@ public class CarService {
     public boolean delete(Long id) {
         return cars.removeIf(c -> c.getId().equals(id));
     }
+    public List<Car> searchByBrand(String brand) {
+        if (brand == null || brand.isEmpty()) return new ArrayList<>(cars);
+        String lower = brand.toLowerCase();
+        List<Car> result = new ArrayList<>();
+        for (Car c : cars) {
+            if (c.getBrand() != null && c.getBrand().toLowerCase().contains(lower)) {
+                result.add(c);
+            }
+        }
+        return result;
+    }
 } 

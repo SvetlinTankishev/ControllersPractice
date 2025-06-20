@@ -25,4 +25,15 @@ public class GovEmployeeService {
     public boolean delete(Long id) {
         return employees.removeIf(e -> e.getId().equals(id));
     }
+    public List<GovEmployee> searchByName(String name) {
+        if (name == null || name.isEmpty()) return new ArrayList<>(employees);
+        String lower = name.toLowerCase();
+        List<GovEmployee> result = new ArrayList<>();
+        for (GovEmployee e : employees) {
+            if (e.getName() != null && e.getName().toLowerCase().contains(lower)) {
+                result.add(e);
+            }
+        }
+        return result;
+    }
 } 

@@ -18,4 +18,18 @@ public class CarRestControllerApiTest {
         mockMvc.perform(get("/api/cars"))
                 .andExpect(status().isOk());
     }
+
+    @Test
+    void searchCars_byBrand_returnsFiltered() throws Exception {
+        // Add a new car
+        mockMvc.perform(post("/api/cars")
+                .contentType("application/json")
+                .content("{\"brand\":\"Honda\"}"))
+                .andExpect(status().isOk());
+
+        // Search for 'Honda'
+        mockMvc.perform(get("/api/cars/search?brand=Honda"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].brand").value("Honda"));
+    }
 } 

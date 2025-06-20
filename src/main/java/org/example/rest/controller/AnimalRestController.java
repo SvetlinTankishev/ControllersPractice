@@ -33,4 +33,20 @@ public class AnimalRestController {
     public void deleteAnimal(@PathVariable Long id) {
         animalService.delete(id);
     }
+
+    @PatchMapping("/{id}")
+    public Animal patchAnimal(@PathVariable Long id, @RequestBody AnimalDto dto) {
+        Animal animal = animalService.getById(id);
+        if (animal == null) throw new NoSuchElementException("Animal not found");
+        if (dto.getType() != null) {
+            animal.setType(dto.getType());
+        }
+        // In a real app, persist the change here
+        return animal;
+    }
+
+    @GetMapping("/search")
+    public List<Animal> searchAnimals(@RequestParam(required = false) String type) {
+        return animalService.searchByType(type);
+    }
 } 

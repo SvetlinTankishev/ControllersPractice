@@ -25,4 +25,15 @@ public class AnimalService {
     public boolean delete(Long id) {
         return animals.removeIf(a -> a.getId().equals(id));
     }
+    public List<Animal> searchByType(String type) {
+        if (type == null || type.isEmpty()) return new ArrayList<>(animals);
+        String lower = type.toLowerCase();
+        List<Animal> result = new ArrayList<>();
+        for (Animal a : animals) {
+            if (a.getType() != null && a.getType().toLowerCase().contains(lower)) {
+                result.add(a);
+            }
+        }
+        return result;
+    }
 } 

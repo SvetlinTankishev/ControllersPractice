@@ -33,4 +33,20 @@ public class GovEmployeeRestController {
     public void deleteEmployee(@PathVariable Long id) {
         govEmployeeService.delete(id);
     }
+
+    @PatchMapping("/{id}")
+    public GovEmployee patchEmployee(@PathVariable Long id, @RequestBody GovEmployeeDto dto) {
+        GovEmployee emp = govEmployeeService.getById(id);
+        if (emp == null) throw new NoSuchElementException("Employee not found");
+        if (dto.getName() != null) {
+            emp.setName(dto.getName());
+        }
+        // In a real app, persist the change here
+        return emp;
+    }
+
+    @GetMapping("/search")
+    public List<GovEmployee> searchEmployees(@RequestParam(required = false) String name) {
+        return govEmployeeService.searchByName(name);
+    }
 } 
