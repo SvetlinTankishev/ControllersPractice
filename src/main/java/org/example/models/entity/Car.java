@@ -1,16 +1,15 @@
 package org.example.models.entity;
 
+import lombok.AllArgsConstructor;
+import lombok.NoArgsConstructor;
+import lombok.Getter;
+import lombok.Setter;
+
+@Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
 public class Car {
     private Long id;
     private String brand;
-
-    public Car() {}
-    public Car(Long id, String brand) {
-        this.id = id;
-        this.brand = brand;
-    }
-    public Long getId() { return id; }
-    public void setId(Long id) { this.id = id; }
-    public String getBrand() { return brand; }
-    public void setBrand(String brand) { this.brand = brand; }
 } 

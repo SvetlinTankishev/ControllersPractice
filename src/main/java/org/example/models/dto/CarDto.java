@@ -1,7 +1,10 @@
 package org.example.models.dto;
 
+import lombok.Getter;
+import lombok.Setter;
+
+@Getter
+@Setter
 public class CarDto {
     private String brand;
-    public String getBrand() { return brand; }
-    public void setBrand(String brand) { this.brand = brand; }
 } 
