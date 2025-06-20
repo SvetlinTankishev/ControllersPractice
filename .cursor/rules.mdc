@@ -1,0 +1,13 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+# .cursor/rules.mdc
+
+- Add tests for any new code and test if it works before finalizing.
+- Consider formulating a few variations of plans before coding.
+- Consider best practices for code quality, maintainability, and security.
+- Always do a sanity check after making changes.
+- Consider technical debt and future-proofing in all decisions.
+
