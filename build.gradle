@@ -13,15 +13,32 @@ repositories {
 
 dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-web'
+    implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
+    implementation 'org.springframework.boot:spring-boot-starter-aop'
+    implementation 'org.flywaydb:flyway-core'
+    implementation 'org.flywaydb:flyway-mysql'
+    implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:2.5.0'
+    runtimeOnly 'com.mysql:mysql-connector-j:8.3.0'
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
     testImplementation platform('org.junit:junit-bom:5.10.0')
     testImplementation 'org.junit.jupiter:junit-jupiter'
+    testImplementation 'org.testcontainers:mysql:1.19.8'
+    testImplementation 'org.testcontainers:junit-jupiter:1.19.8'
     compileOnly 'org.projectlombok:lombok:1.18.32'
     annotationProcessor 'org.projectlombok:lombok:1.18.32'
     testCompileOnly 'org.projectlombok:lombok:1.18.32'
     testAnnotationProcessor 'org.projectlombok:lombok:1.18.32'
+    testImplementation 'org.springframework.boot:spring-boot-testcontainers'
 }
 
 test {
     useJUnitPlatform()
+}
+
+compileJava {
+    options.compilerArgs += ['-parameters']
+}
+
+compileTestJava {
+    options.compilerArgs += ['-parameters']
 }

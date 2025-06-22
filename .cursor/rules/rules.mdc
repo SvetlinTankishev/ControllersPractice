@@ -11,3 +11,155 @@ alwaysApply: true
 - Always do a sanity check after making changes.
 - Consider technical debt and future-proofing in all decisions.
 
+## Test Structure and Naming Conventions
+
+### Class Naming
+- Unit tests: `{ClassName}UTest.java`
+- Integration tests: `{ClassName}ITest.java`
+- Api tests: `{ClassName}ApiTest.java`
+- Test classes must be in the same package structure as the class under test
+- Example: `src/test/java//service/CarServiceITest.java`
+
+### Method Naming
+- Use descriptive method names that explain the scenario and expected outcome
+- Format: `{MethodName}_should{ExpectedBehavior}_when{Condition}`
+- Examples:
+  - `GetStudentById_shouldReturnStudent_whenStudentExists`
+  - `CreateStudent_shouldThrowException_whenEmailIsInvalid`
+  - `UpdateStudent_shouldSucceed_whenValidDataProvided`
+
+### Test Method Structure
+Always use the **Given-When-Then** pattern:
+```java
+@Test
+void MethodName_shouldBehavior_whenCondition() {
+    // Given
+    // Setup test data and mocks
+    
+    // When
+    // Execute the method under test
+    
+    // Then
+    // Verify results and interactions
+}
+```
+
+## Mocking and Dependencies
+
+### Mock Setup
+- Use `@ExtendWith(MockitoExtension.class)` for all unit tests
+- Use `@Mock` for dependencies
+- Use `@InjectMocks` for the class under test
+- Always mock external dependencies (repositories, services, etc.)
+
+### Mock Configuration
+- Use `when().thenReturn()` for simple returns
+- Use `doNothing().when()` for void methods
+- Use `doThrow().when()` for exception scenarios
+- Use `verify()` to check method calls and interactions
+
+### Test Data
+- Create and use a `TestModels` class for creating mock objects
+- Create and use a `TestValues` class for common test constants
+- Create specific test data only when `TestModels` doesn't provide what's needed
+- Use `mock()` for simple objects when detailed setup isn't needed
+
+## Test Coverage Priorities
+
+### High Priority (Create First)
+1. **Service Layer Tests**: All business logic in service classes
+2. **Controller Tests**: API endpoints and request/response handling
+3. **Repository Tests**: Custom query methods and data access logic
+4. **Exception Handling**: Error scenarios and custom exceptions
+
+### Medium Priority
+1. **Scheduler Tests**: Background job logic
+2. **Configuration Tests**: Custom configurations and beans
+3. **Utility Tests**: Helper methods and utilities
+
+### Low Priority
+1. **Model Tests**: Simple getters/setters (only if complex logic exists)
+2. **DTO Tests**: Data transfer objects (only if validation logic exists)
+
+## Test Scenarios to Cover
+
+### Happy Path Tests
+- Normal operation with valid inputs
+- Expected successful outcomes
+- Proper data transformation and return values
+
+### Edge Cases
+- Null inputs and null handling
+- Empty collections and lists
+- Boundary values (min/max lengths, dates, etc.)
+- Invalid or malformed data
+
+### Error Scenarios
+- Exception throwing and handling
+- Invalid business rules
+- Missing required data
+- Database constraint violations
+
+### Integration Points
+- External service calls
+- Database operations
+- File operations
+- Email sending
+
+## Specific Testing Patterns
+
+### Repository Tests
+- Test custom query methods
+- Verify correct SQL generation (if using @Query)
+- Test pagination and sorting
+- Test finder methods with various criteria
+
+### Service Tests
+- Test business logic thoroughly
+- Mock all dependencies
+- Test transaction boundaries
+- Verify proper exception propagation
+
+### Controller Tests
+- Test all HTTP methods (GET, POST, PUT, DELETE)
+- Test request validation
+- Test response status codes
+- Test error handling and error responses
+
+### Scheduler Tests
+- Test job execution logic
+- Test scheduling conditions
+- Test error handling in background jobs
+- Test data processing in batches
+
+## Assertion Patterns
+
+### Use Appropriate Assertions
+- `assertEquals()` for exact value matching
+- `assertNotNull()` for null checks
+- `assertTrue()`/`assertFalse()` for boolean conditions
+- `assertThrows()` for exception testing
+- `verify()` for mock interactions
+
+### Verify Mock Interactions
+- Always verify important method calls
+- Check correct parameters passed to mocks
+- Verify call counts when relevant
+- Use `ArgumentCaptor` for complex parameter verification
+
+## Code Quality Rules
+
+### Test Independence
+- Each test must be independent and not rely on other tests
+- Use fresh mocks for each test method
+- Don't share state between tests
+
+### Test Readability
+- Use descriptive variable names
+- Add comments for complex setup
+- Keep test methods focused on one scenario
+- Use helper methods for common setup
+
+### Performance Considerations
+- Keep tests fast and lightweight
+- Avoid unnecessary database operations in unit tests

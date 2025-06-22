@@ -1,83 +1,286 @@
 package org.example.rest.api.animal;
 
-import org.junit.jupiter.api.Test;
-import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.test.web.servlet.MockMvc;
-import org.example.rest.controller.AnimalRestController;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
-import org.springframework.boot.test.mock.mockito.MockBean;
-import org.example.service.AnimalService;
-import static org.mockito.Mockito.*;
+import org.example.config.ApiTestBase;
+import org.example.models.dto.AnimalDto;
 import org.example.models.entity.Animal;
-import java.util.Arrays;
-import java.util.Collections;
+import org.example.service.AnimalService;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
 
-@WebMvcTest(AnimalRestController.class)
-public class AnimalRestControllerApiTest {
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+
+public class AnimalRestControllerApiTest extends ApiTestBase {
+
     @Autowired
-    private MockMvc mockMvc;
-
-    @MockBean
     private AnimalService animalService;
 
-    @Test
-    void getAllAnimals_returnsOk() throws Exception {
-        when(animalService.getAll()).thenReturn(Arrays.asList(new Animal(1L, "cat"), new Animal(2L, "dog")));
-        mockMvc.perform(get("/api/animals"))
-                .andExpect(status().isOk());
+    private Animal testAnimal;
+
+    @BeforeEach
+    void setUp() {
+        // Clean up any existing test data
+        cleanupTestData();
+        // Create a test animal for each test
+        testAnimal = animalService.add("Test Animal");
     }
 
+    // GET /api/animals - Get all animals
     @Test
-    void patchAnimal_updatesType() throws Exception {
-        Animal animal = new Animal(3L, "lion");
-        when(animalService.getById(3L)).thenReturn(animal);
-        when(animalService.add("lion")).thenReturn(animal);
-        mockMvc.perform(post("/api/animals")
-                .contentType("application/json")
-                .content("{\"type\":\"lion\"}"))
-                .andExpect(status().isOk());
-        animal.setType("tiger");
-        mockMvc.perform(patch("/api/animals/3")
-                .contentType("application/json")
-                .content("{\"type\":\"tiger\"}"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.type").value("tiger"));
-    }
+    void getAllAnimals_shouldReturnAllAnimals_whenAnimalsExist() throws Exception {
+        // Given - additional animals created in setUp()
+        animalService.add("Lion");
+        animalService.add("Tiger");
 
-    @Test
-    void searchAnimals_byType_returnsFiltered() throws Exception {
-        Animal lion = new Animal(3L, "lion");
-        when(animalService.add("lion")).thenReturn(lion);
-        when(animalService.searchByType("lion")).thenReturn(Collections.singletonList(lion));
-        mockMvc.perform(post("/api/animals")
-                .contentType("application/json")
-                .content("{\"type\":\"lion\"}"))
-                .andExpect(status().isOk());
-        mockMvc.perform(get("/api/animals/search?type=lion"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$[0].type").value("lion"));
-    }
-
-    @Test
-    void getAnimalsPage_returnsPaginated() throws Exception {
-        Animal a1 = new Animal(1L, "cat");
-        Animal a2 = new Animal(2L, "dog");
-        Animal a3 = new Animal(3L, "lion");
-        when(animalService.add("lion")).thenReturn(a3);
-        when(animalService.getPage(0, 2)).thenReturn(Arrays.asList(a1, a2));
-        when(animalService.getPage(1, 2)).thenReturn(Collections.singletonList(a3));
-        mockMvc.perform(post("/api/animals")
-                .contentType("application/json")
-                .content("{\"type\":\"lion\"}"))
-                .andExpect(status().isOk());
-        mockMvc.perform(get("/api/animals/page?page=0&size=2"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$[0].type").exists())
-                .andExpect(jsonPath("$[1].type").exists());
-        mockMvc.perform(get("/api/animals/page?page=1&size=2"))
-                .andExpect(status().isOk())
+        // When & Then
+        validateSuccess(getJson("/api/animals"))
+                .andExpect(jsonPath("$").isArray())
+                .andExpect(jsonPath("$[0].id").exists())
                 .andExpect(jsonPath("$[0].type").exists());
+    }
+
+    @Test
+    void getAllAnimals_shouldReturnEmptyList_whenNoAnimalsExist() throws Exception {
+        // Given - clear all animals
+        cleanupTestData();
+
+        // When & Then
+        validateSuccess(getJson("/api/animals"))
+                .andExpect(jsonPath("$").isArray())
+                .andExpect(jsonPath("$.length()").value(0));
+    }
+
+    // GET /api/animals/{id} - Get animal by ID
+    @Test
+    void getAnimalById_shouldReturnAnimal_whenAnimalExists() throws Exception {
+        // Given - testAnimal created in setUp()
+
+        // When & Then
+        validateSuccess(getJson("/api/animals/" + testAnimal.getId()))
+                .andExpect(jsonPath("$.id").value(testAnimal.getId()))
+                .andExpect(jsonPath("$.type").value("Test Animal"));
+    }
+
+    @Test
+    void getAnimalById_shouldReturn404_whenAnimalDoesNotExist() throws Exception {
+        // Given - non-existent ID
+        Long nonExistentId = 999L;
+
+        // When & Then
+        validateNotFound(getJson("/api/animals/" + nonExistentId));
+    }
+
+    @Test
+    void getAnimalById_shouldReturn400_whenInvalidIdProvided() throws Exception {
+        // Given - invalid ID format
+        String invalidId = "invalid";
+
+        // When & Then
+        validateBadRequest(getJson("/api/animals/" + invalidId));
+    }
+
+    // POST /api/animals - Create new animal
+    @Test
+    void createAnimal_shouldReturnCreatedAnimal_whenValidDataProvided() throws Exception {
+        // Given
+        AnimalDto animalDto = new AnimalDto();
+        animalDto.setType("New Animal");
+
+        // When & Then
+        validateCreated(postJson("/api/animals", animalDto))
+                .andExpect(jsonPath("$.id").exists())
+                .andExpect(jsonPath("$.type").value("New Animal"));
+    }
+
+    @Test
+    void createAnimal_shouldReturn400_whenInvalidJsonProvided() throws Exception {
+        // Given - invalid JSON
+        String invalidJson = "{ invalid json }";
+
+        // When & Then
+        mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post("/api/animals")
+                .contentType("application/json")
+                .content(invalidJson))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void createAnimal_shouldReturn400_whenEmptyBodyProvided() throws Exception {
+        // Given - empty body
+        AnimalDto emptyDto = new AnimalDto();
+
+        // When & Then
+        validateCreated(postJson("/api/animals", emptyDto))
+                .andExpect(jsonPath("$.id").exists())
+                .andExpect(jsonPath("$.type").isEmpty());
+    }
+
+    // PATCH /api/animals/{id} - Update animal
+    @Test
+    void updateAnimal_shouldReturnUpdatedAnimal_whenValidDataProvided() throws Exception {
+        // Given
+        AnimalDto updateDto = new AnimalDto();
+        updateDto.setType("Updated Animal");
+
+        // When & Then
+        validateSuccess(patchJson("/api/animals/" + testAnimal.getId(), updateDto))
+                .andExpect(jsonPath("$.id").value(testAnimal.getId()))
+                .andExpect(jsonPath("$.type").value("Updated Animal"));
+    }
+
+    @Test
+    void updateAnimal_shouldReturn404_whenAnimalDoesNotExist() throws Exception {
+        // Given
+        Long nonExistentId = 999L;
+        AnimalDto updateDto = new AnimalDto();
+        updateDto.setType("Updated Animal");
+
+        // When & Then
+        validateNotFound(patchJson("/api/animals/" + nonExistentId, updateDto));
+    }
+
+    @Test
+    void updateAnimal_shouldReturnOriginalAnimal_whenNoTypeProvided() throws Exception {
+        // Given
+        AnimalDto emptyDto = new AnimalDto();
+
+        // When & Then
+        validateSuccess(patchJson("/api/animals/" + testAnimal.getId(), emptyDto))
+                .andExpect(jsonPath("$.id").value(testAnimal.getId()))
+                .andExpect(jsonPath("$.type").value("Test Animal"));
+    }
+
+    @Test
+    void updateAnimal_shouldReturn400_whenInvalidIdProvided() throws Exception {
+        // Given
+        String invalidId = "invalid";
+        AnimalDto updateDto = new AnimalDto();
+        updateDto.setType("Updated Animal");
+
+        // When & Then
+        validateBadRequest(patchJson("/api/animals/" + invalidId, updateDto));
+    }
+
+    // DELETE /api/animals/{id} - Delete animal
+    @Test
+    void deleteAnimal_shouldReturn204_whenAnimalExists() throws Exception {
+        // Given - testAnimal created in setUp()
+
+        // When & Then
+        validateNoContent(deleteJson("/api/animals/" + testAnimal.getId()));
+    }
+
+    @Test
+    void deleteAnimal_shouldReturn404_whenAnimalDoesNotExist() throws Exception {
+        // Given
+        Long nonExistentId = 999L;
+
+        // When & Then
+        validateNotFound(deleteJson("/api/animals/" + nonExistentId));
+    }
+
+    @Test
+    void deleteAnimal_shouldReturn400_whenInvalidIdProvided() throws Exception {
+        // Given
+        String invalidId = "invalid";
+
+        // When & Then
+        validateBadRequest(deleteJson("/api/animals/" + invalidId));
+    }
+
+    // GET /api/animals/search - Search animals by type
+    @Test
+    void searchAnimals_shouldReturnMatchingAnimals_whenTypeProvided() throws Exception {
+        // Given
+        animalService.add("Lion");
+        animalService.add("Tiger");
+        animalService.add("Elephant");
+
+        // When & Then
+        validateSuccess(getJson("/api/animals/search?type=lion"))
+                .andExpect(jsonPath("$").isArray())
+                .andExpect(jsonPath("$[0].type").value("Lion"));
+    }
+
+    @Test
+    void searchAnimals_shouldReturnAllAnimals_whenNoTypeProvided() throws Exception {
+        // Given - only testAnimal exists from setUp()
+
+        // When & Then
+        validateSuccess(getJson("/api/animals/search"))
+                .andExpect(jsonPath("$").isArray())
+                .andExpect(jsonPath("$.length()").value(1));
+    }
+
+    @Test
+    void searchAnimals_shouldReturnEmptyList_whenNoMatchingAnimals() throws Exception {
+        // Given - no animals with "zebra" type
+
+        // When & Then
+        validateSuccess(getJson("/api/animals/search?type=zebra"))
+                .andExpect(jsonPath("$").isArray())
+                .andExpect(jsonPath("$.length()").value(0));
+    }
+
+    @Test
+    void searchAnimals_shouldBeCaseInsensitive() throws Exception {
+        // Given
+        animalService.add("LION");
+
+        // When & Then
+        validateSuccess(getJson("/api/animals/search?type=lion"))
+                .andExpect(jsonPath("$").isArray())
+                .andExpect(jsonPath("$[0].type").value("LION"));
+    }
+
+    // GET /api/animals/page - Get paginated animals
+    @Test
+    void getAnimalsPage_shouldReturnPaginatedResults_whenValidParametersProvided() throws Exception {
+        // Given
+        animalService.add("Animal 1");
+        animalService.add("Animal 2");
+        animalService.add("Animal 3");
+
+        // When & Then
+        validateSuccess(getJson("/api/animals/page?page=0&size=2"))
+                .andExpect(jsonPath("$").isArray())
+                .andExpect(jsonPath("$.length()").value(2));
+    }
+
+    @Test
+    void getAnimalsPage_shouldReturnEmptyList_whenPageOutOfBounds() throws Exception {
+        // Given - only a few animals exist
+
+        // When & Then
+        validateSuccess(getJson("/api/animals/page?page=10&size=5"))
+                .andExpect(jsonPath("$").isArray())
+                .andExpect(jsonPath("$.length()").value(0));
+    }
+
+    @Test
+    void getAnimalsPage_shouldReturnEmptyList_whenInvalidSizeProvided() throws Exception {
+        // Given - invalid size parameter
+
+        // When & Then
+        validateSuccess(getJson("/api/animals/page?page=0&size=0"))
+                .andExpect(jsonPath("$").isArray())
+                .andExpect(jsonPath("$.length()").value(0));
+    }
+
+    @Test
+    void getAnimalsPage_shouldReturn400_whenMissingRequiredParameters() throws Exception {
+        // Given - missing page parameter
+
+        // When & Then
+        validateBadRequest(getJson("/api/animals/page?size=5"));
+    }
+
+    @Test
+    void getAnimalsPage_shouldReturn400_whenInvalidParameterTypes() throws Exception {
+        // Given - invalid parameter types
+
+        // When & Then
+        validateBadRequest(getJson("/api/animals/page?page=invalid&size=invalid"));
     }
 } 

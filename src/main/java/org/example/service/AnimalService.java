@@ -1,48 +1,56 @@
 package org.example.service;
 
 import org.example.models.entity.Animal;
-import java.util.*;
-import java.util.concurrent.atomic.AtomicLong;
+import org.example.repository.AnimalRepository;
 import org.springframework.stereotype.Service;
+import java.util.List;
 
 @Service
 public class AnimalService {
-    private final List<Animal> animals = new ArrayList<>();
-    private final AtomicLong idGen = new AtomicLong(1);
+    private final AnimalRepository animalRepository;
 
-    public AnimalService() {
-        animals.add(new Animal(idGen.getAndIncrement(), "cat"));
-        animals.add(new Animal(idGen.getAndIncrement(), "dog"));
+    public AnimalService(AnimalRepository animalRepository) {
+        this.animalRepository = animalRepository;
     }
 
-    public List<Animal> getAll() { return animals; }
+    public List<Animal> getAll() {
+        return animalRepository.findAll();
+    }
+
     public Animal getById(Long id) {
-        return animals.stream().filter(a -> a.getId().equals(id)).findFirst().orElse(null);
+        return animalRepository.findById(id).orElse(null);
     }
+
     public Animal add(String type) {
-        Animal a = new Animal(idGen.getAndIncrement(), type);
-        animals.add(a);
-        return a;
+        Animal animal = new Animal();
+        animal.setType(type);
+        return animalRepository.save(animal);
     }
+
     public boolean delete(Long id) {
-        return animals.removeIf(a -> a.getId().equals(id));
-    }
-    public List<Animal> searchByType(String type) {
-        if (type == null || type.isEmpty()) return new ArrayList<>(animals);
-        String lower = type.toLowerCase();
-        List<Animal> result = new ArrayList<>();
-        for (Animal a : animals) {
-            if (a.getType() != null && a.getType().toLowerCase().contains(lower)) {
-                result.add(a);
-            }
+        if (animalRepository.existsById(id)) {
+            animalRepository.deleteById(id);
+            return true;
         }
-        return result;
+        return false;
     }
+
+    public List<Animal> searchByType(String type) {
+        if (type == null || type.isEmpty()) return animalRepository.findAll();
+        return animalRepository.findByTypeContainingIgnoreCase(type);
+    }
+
     public List<Animal> getPage(int page, int size) {
-        if (size <= 0) return new ArrayList<>();
-        int from = Math.max(0, page * size);
-        int to = Math.min(animals.size(), from + size);
-        if (from >= animals.size()) return new ArrayList<>();
-        return animals.subList(from, to);
+        if (size <= 0) return List.of();
+        return animalRepository.findAll(org.springframework.data.domain.PageRequest.of(page, size)).getContent();
+    }
+
+    public Animal update(Long id, String type) {
+        Animal animal = getById(id);
+        if (animal == null) {
+            return null;
+        }
+        animal.setType(type);
+        return animalRepository.save(animal);
     }
 } 
