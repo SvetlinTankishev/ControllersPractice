@@ -10,7 +10,11 @@ import java.util.NoSuchElementException;
 @RestController
 @RequestMapping("/api/animals")
 public class AnimalRestController {
-    private final AnimalService animalService = new AnimalService();
+    private final AnimalService animalService;
+
+    public AnimalRestController(AnimalService animalService) {
+        this.animalService = animalService;
+    }
 
     @GetMapping
     public List<Animal> getAllAnimals() {

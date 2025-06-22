@@ -7,27 +7,38 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.example.rest.controller.AnimalRestController;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
+import org.springframework.boot.test.mock.mockito.MockBean;
+import org.example.service.AnimalService;
+import static org.mockito.Mockito.*;
+import org.example.models.entity.Animal;
+import java.util.Arrays;
+import java.util.Collections;
 
 @WebMvcTest(AnimalRestController.class)
 public class AnimalRestControllerApiTest {
     @Autowired
     private MockMvc mockMvc;
 
+    @MockBean
+    private AnimalService animalService;
+
     @Test
     void getAllAnimals_returnsOk() throws Exception {
+        when(animalService.getAll()).thenReturn(Arrays.asList(new Animal(1L, "cat"), new Animal(2L, "dog")));
         mockMvc.perform(get("/api/animals"))
                 .andExpect(status().isOk());
     }
 
     @Test
     void patchAnimal_updatesType() throws Exception {
-        // Add a new animal first
+        Animal animal = new Animal(3L, "lion");
+        when(animalService.getById(3L)).thenReturn(animal);
+        when(animalService.add("lion")).thenReturn(animal);
         mockMvc.perform(post("/api/animals")
                 .contentType("application/json")
                 .content("{\"type\":\"lion\"}"))
                 .andExpect(status().isOk());
-
-        // Patch the animal with id 3 (since 1 and 2 are created by default)
+        animal.setType("tiger");
         mockMvc.perform(patch("/api/animals/3")
                 .contentType("application/json")
                 .content("{\"type\":\"tiger\"}"))
@@ -37,13 +48,13 @@ public class AnimalRestControllerApiTest {
 
     @Test
     void searchAnimals_byType_returnsFiltered() throws Exception {
-        // Add a new animal
+        Animal lion = new Animal(3L, "lion");
+        when(animalService.add("lion")).thenReturn(lion);
+        when(animalService.searchByType("lion")).thenReturn(Collections.singletonList(lion));
         mockMvc.perform(post("/api/animals")
                 .contentType("application/json")
                 .content("{\"type\":\"lion\"}"))
                 .andExpect(status().isOk());
-
-        // Search for 'lion'
         mockMvc.perform(get("/api/animals/search?type=lion"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[0].type").value("lion"));
@@ -51,19 +62,20 @@ public class AnimalRestControllerApiTest {
 
     @Test
     void getAnimalsPage_returnsPaginated() throws Exception {
-        // Add a new animal to ensure more than 2 exist
+        Animal a1 = new Animal(1L, "cat");
+        Animal a2 = new Animal(2L, "dog");
+        Animal a3 = new Animal(3L, "lion");
+        when(animalService.add("lion")).thenReturn(a3);
+        when(animalService.getPage(0, 2)).thenReturn(Arrays.asList(a1, a2));
+        when(animalService.getPage(1, 2)).thenReturn(Collections.singletonList(a3));
         mockMvc.perform(post("/api/animals")
                 .contentType("application/json")
                 .content("{\"type\":\"lion\"}"))
                 .andExpect(status().isOk());
-
-        // Page 0, size 2
         mockMvc.perform(get("/api/animals/page?page=0&size=2"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[0].type").exists())
                 .andExpect(jsonPath("$[1].type").exists());
-
-        // Page 1, size 2 (should contain at least 1 animal if 3 exist)
         mockMvc.perform(get("/api/animals/page?page=1&size=2"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[0].type").exists());

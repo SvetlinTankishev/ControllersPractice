@@ -10,7 +10,11 @@ import java.util.NoSuchElementException;
 @RestController
 @RequestMapping("/api/gov-employees")
 public class GovEmployeeRestController {
-    private final GovEmployeeService govEmployeeService = new GovEmployeeService();
+    private final GovEmployeeService govEmployeeService;
+
+    public GovEmployeeRestController(GovEmployeeService govEmployeeService) {
+        this.govEmployeeService = govEmployeeService;
+    }
 
     @GetMapping
     public List<GovEmployee> getAllEmployees() {

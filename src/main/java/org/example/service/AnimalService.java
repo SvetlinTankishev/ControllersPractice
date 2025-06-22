@@ -3,7 +3,9 @@ package org.example.service;
 import org.example.models.entity.Animal;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicLong;
+import org.springframework.stereotype.Service;
 
+@Service
 public class AnimalService {
     private final List<Animal> animals = new ArrayList<>();
     private final AtomicLong idGen = new AtomicLong(1);

@@ -10,7 +10,11 @@ import java.util.NoSuchElementException;
 @RestController
 @RequestMapping("/api/cars")
 public class CarRestController {
-    private final CarService carService = new CarService();
+    private final CarService carService;
+
+    public CarRestController(CarService carService) {
+        this.carService = carService;
+    }
 
     @GetMapping
     public List<Car> getAllCars() {

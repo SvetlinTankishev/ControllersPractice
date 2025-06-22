@@ -7,11 +7,16 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.example.action.controller.CarActionController;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
+import org.springframework.boot.test.mock.mockito.MockBean;
+import org.example.service.CarService;
 
 @WebMvcTest(CarActionController.class)
 public class CarActionControllerApiTest {
     @Autowired
     private MockMvc mockMvc;
+
+    @MockBean
+    private CarService carService;
 
     @Test
     void listCars_returnsOk() throws Exception {
