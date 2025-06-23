@@ -6,7 +6,13 @@ import org.example.models.entity.Animal;
 import org.example.service.AnimalService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
+
+import java.util.stream.Stream;
 
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -77,7 +83,9 @@ public class AnimalRestControllerApiTest extends ApiTestBase {
         String invalidId = "invalid";
 
         // When & Then
-        validateBadRequest(getJson("/api/animals/" + invalidId));
+        validateBadRequest(getJson("/api/animals/" + invalidId))
+                .andExpect(jsonPath("$.errorCode").value("BAD_REQUEST"))
+                .andExpect(jsonPath("$.message").value("Invalid value 'invalid' for parameter 'id'"));
     }
 
     // POST /api/animals - Create new animal
@@ -102,18 +110,36 @@ public class AnimalRestControllerApiTest extends ApiTestBase {
         mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post("/api/animals")
                 .contentType("application/json")
                 .content(invalidJson))
-                .andExpect(status().isBadRequest());
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.errorCode").value("BAD_REQUEST"))
+                .andExpect(jsonPath("$.message").value("Invalid JSON format"));
     }
 
-    @Test
-    void createAnimal_shouldReturn400_whenEmptyBodyProvided() throws Exception {
-        // Given - empty body
-        AnimalDto emptyDto = new AnimalDto();
+    // Parameterized test for validation scenarios
+    @ParameterizedTest(name = "Create animal validation: {0}")
+    @MethodSource("invalidAnimalCreationData")
+    void createAnimal_shouldReturn400_whenInvalidDataProvided(String testName, String type, String expectedError) throws Exception {
+        // Given
+        AnimalDto invalidDto = new AnimalDto();
+        if (type != null) {
+            invalidDto.setType(type);
+        }
 
         // When & Then
-        validateCreated(postJson("/api/animals", emptyDto))
-                .andExpect(jsonPath("$.id").exists())
-                .andExpect(jsonPath("$.type").isEmpty());
+        validateBadRequest(postJson("/api/animals", invalidDto))
+                .andExpect(jsonPath("$.errorCode").value("VALIDATION_ERROR"))
+                .andExpect(jsonPath("$.message").value("Input validation failed"))
+                .andExpect(jsonPath("$.details").isArray())
+                .andExpect(jsonPath("$.details[0]").value(expectedError));
+    }
+
+    static Stream<Arguments> invalidAnimalCreationData() {
+        return Stream.of(
+                Arguments.of("Empty type", null, "type: Type cannot be blank"),
+                Arguments.of("Type too short", "A", "type: Type must be between 2 and 50 characters"),
+                Arguments.of("Type too long", "A".repeat(51), "type: Type must be between 2 and 50 characters"),
+                Arguments.of("Type with spaces only", "   ", "type: Type cannot be blank")
+        );
     }
 
     // PATCH /api/animals/{id} - Update animal
@@ -141,25 +167,40 @@ public class AnimalRestControllerApiTest extends ApiTestBase {
     }
 
     @Test
-    void updateAnimal_shouldReturnOriginalAnimal_whenNoTypeProvided() throws Exception {
-        // Given
+    void updateAnimal_shouldReturn400_whenNoTypeProvided() throws Exception {
+        // Given - empty DTO should fail validation
         AnimalDto emptyDto = new AnimalDto();
 
         // When & Then
-        validateSuccess(patchJson("/api/animals/" + testAnimal.getId(), emptyDto))
-                .andExpect(jsonPath("$.id").value(testAnimal.getId()))
-                .andExpect(jsonPath("$.type").value("Test Animal"));
+        validateBadRequest(patchJson("/api/animals/" + testAnimal.getId(), emptyDto))
+                .andExpect(jsonPath("$.errorCode").value("VALIDATION_ERROR"))
+                .andExpect(jsonPath("$.message").value("Input validation failed"))
+                .andExpect(jsonPath("$.details").isArray())
+                .andExpect(jsonPath("$.details[0]").value("type: Type cannot be blank"));
     }
 
-    @Test
-    void updateAnimal_shouldReturn400_whenInvalidIdProvided() throws Exception {
+    // Parameterized test for invalid ID scenarios
+    @ParameterizedTest(name = "Invalid ID test: {0}")
+    @ValueSource(strings = {"update", "delete"})
+    void shouldReturn400_whenInvalidIdProvided(String operation) throws Exception {
         // Given
         String invalidId = "invalid";
-        AnimalDto updateDto = new AnimalDto();
-        updateDto.setType("Updated Animal");
 
         // When & Then
-        validateBadRequest(patchJson("/api/animals/" + invalidId, updateDto));
+        switch (operation) {
+            case "update":
+                AnimalDto updateDto = new AnimalDto();
+                updateDto.setType("Updated Animal");
+                validateBadRequest(patchJson("/api/animals/" + invalidId, updateDto))
+                        .andExpect(jsonPath("$.errorCode").value("BAD_REQUEST"))
+                        .andExpect(jsonPath("$.message").value("Invalid value 'invalid' for parameter 'id'"));
+                break;
+            case "delete":
+                validateBadRequest(deleteJson("/api/animals/" + invalidId))
+                        .andExpect(jsonPath("$.errorCode").value("BAD_REQUEST"))
+                        .andExpect(jsonPath("$.message").value("Invalid value 'invalid' for parameter 'id'"));
+                break;
+        }
     }
 
     // DELETE /api/animals/{id} - Delete animal
@@ -178,15 +219,6 @@ public class AnimalRestControllerApiTest extends ApiTestBase {
 
         // When & Then
         validateNotFound(deleteJson("/api/animals/" + nonExistentId));
-    }
-
-    @Test
-    void deleteAnimal_shouldReturn400_whenInvalidIdProvided() throws Exception {
-        // Given
-        String invalidId = "invalid";
-
-        // When & Then
-        validateBadRequest(deleteJson("/api/animals/" + invalidId));
     }
 
     // GET /api/animals/search - Search animals by type
@@ -258,29 +290,24 @@ public class AnimalRestControllerApiTest extends ApiTestBase {
                 .andExpect(jsonPath("$.length()").value(0));
     }
 
-    @Test
-    void getAnimalsPage_shouldReturnEmptyList_whenInvalidSizeProvided() throws Exception {
-        // Given - invalid size parameter
-
+    // Parameterized test for pagination error scenarios
+    @ParameterizedTest(name = "Pagination error: {0}")
+    @MethodSource("invalidPaginationData")
+    void getAnimalsPage_shouldReturn400_whenInvalidParametersProvided(String testName, String url, String expectedErrorCode, String expectedMessage) throws Exception {
         // When & Then
-        validateSuccess(getJson("/api/animals/page?page=0&size=0"))
-                .andExpect(jsonPath("$").isArray())
-                .andExpect(jsonPath("$.length()").value(0));
+        var result = validateBadRequest(getJson(url))
+                .andExpect(jsonPath("$.errorCode").value(expectedErrorCode));
+        
+        if (expectedMessage != null) {
+            result.andExpect(jsonPath("$.message").value(expectedMessage));
+        }
     }
 
-    @Test
-    void getAnimalsPage_shouldReturn400_whenMissingRequiredParameters() throws Exception {
-        // Given - missing page parameter
-
-        // When & Then
-        validateBadRequest(getJson("/api/animals/page?size=5"));
-    }
-
-    @Test
-    void getAnimalsPage_shouldReturn400_whenInvalidParameterTypes() throws Exception {
-        // Given - invalid parameter types
-
-        // When & Then
-        validateBadRequest(getJson("/api/animals/page?page=invalid&size=invalid"));
+    static Stream<Arguments> invalidPaginationData() {
+        return Stream.of(
+                Arguments.of("Invalid size (0)", "/api/animals/page?page=0&size=0", "BAD_REQUEST", "Page must be >= 0 and size must be > 0"),
+                Arguments.of("Missing page parameter", "/api/animals/page?size=5", "VALIDATION_ERROR", "Input validation failed"),
+                Arguments.of("Invalid parameter types", "/api/animals/page?page=invalid&size=invalid", "BAD_REQUEST", null)
+        );
     }
 } 

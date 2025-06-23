@@ -6,7 +6,13 @@ import org.example.models.entity.Car;
 import org.example.service.CarService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
+
+import java.util.stream.Stream;
 
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -77,7 +83,9 @@ public class CarRestControllerApiTest extends ApiTestBase {
         String invalidId = "invalid";
 
         // When & Then
-        validateBadRequest(getJson("/api/cars/" + invalidId));
+        validateBadRequest(getJson("/api/cars/" + invalidId))
+                .andExpect(jsonPath("$.errorCode").value("BAD_REQUEST"))
+                .andExpect(jsonPath("$.message").value("Invalid value 'invalid' for parameter 'id'"));
     }
 
     // POST /api/cars - Create new car
@@ -102,18 +110,36 @@ public class CarRestControllerApiTest extends ApiTestBase {
         mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post("/api/cars")
                 .contentType("application/json")
                 .content(invalidJson))
-                .andExpect(status().isBadRequest());
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.errorCode").value("BAD_REQUEST"))
+                .andExpect(jsonPath("$.message").value("Invalid JSON format"));
     }
 
-    @Test
-    void createCar_shouldReturn400_whenEmptyBodyProvided() throws Exception {
-        // Given - empty body
-        CarDto emptyDto = new CarDto();
+    // Parameterized test for validation scenarios
+    @ParameterizedTest(name = "Create car validation: {0}")
+    @MethodSource("invalidCarCreationData")
+    void createCar_shouldReturn400_whenInvalidDataProvided(String testName, String brand, String expectedError) throws Exception {
+        // Given
+        CarDto invalidDto = new CarDto();
+        if (brand != null) {
+            invalidDto.setBrand(brand);
+        }
 
         // When & Then
-        validateCreated(postJson("/api/cars", emptyDto))
-                .andExpect(jsonPath("$.id").exists())
-                .andExpect(jsonPath("$.brand").isEmpty());
+        validateBadRequest(postJson("/api/cars", invalidDto))
+                .andExpect(jsonPath("$.errorCode").value("VALIDATION_ERROR"))
+                .andExpect(jsonPath("$.message").value("Input validation failed"))
+                .andExpect(jsonPath("$.details").isArray())
+                .andExpect(jsonPath("$.details[0]").value(expectedError));
+    }
+
+    static Stream<Arguments> invalidCarCreationData() {
+        return Stream.of(
+                Arguments.of("Empty brand", null, "brand: Brand cannot be blank"),
+                Arguments.of("Brand too short", "A", "brand: Brand must be between 2 and 50 characters"),
+                Arguments.of("Brand too long", "A".repeat(51), "brand: Brand must be between 2 and 50 characters"),
+                Arguments.of("Brand with spaces only", "   ", "brand: Brand cannot be blank")
+        );
     }
 
     // PATCH /api/cars/{id} - Update car
@@ -141,25 +167,40 @@ public class CarRestControllerApiTest extends ApiTestBase {
     }
 
     @Test
-    void updateCar_shouldReturnOriginalCar_whenNoBrandProvided() throws Exception {
-        // Given
+    void updateCar_shouldReturn400_whenNoBrandProvided() throws Exception {
+        // Given - empty DTO should fail validation
         CarDto emptyDto = new CarDto();
 
         // When & Then
-        validateSuccess(patchJson("/api/cars/" + testCar.getId(), emptyDto))
-                .andExpect(jsonPath("$.id").value(testCar.getId()))
-                .andExpect(jsonPath("$.brand").value("Test Car"));
+        validateBadRequest(patchJson("/api/cars/" + testCar.getId(), emptyDto))
+                .andExpect(jsonPath("$.errorCode").value("VALIDATION_ERROR"))
+                .andExpect(jsonPath("$.message").value("Input validation failed"))
+                .andExpect(jsonPath("$.details").isArray())
+                .andExpect(jsonPath("$.details[0]").value("brand: Brand cannot be blank"));
     }
 
-    @Test
-    void updateCar_shouldReturn400_whenInvalidIdProvided() throws Exception {
+    // Parameterized test for invalid ID scenarios
+    @ParameterizedTest(name = "Invalid ID test: {0}")
+    @ValueSource(strings = {"update", "delete"})
+    void shouldReturn400_whenInvalidIdProvided(String operation) throws Exception {
         // Given
         String invalidId = "invalid";
-        CarDto updateDto = new CarDto();
-        updateDto.setBrand("Updated Car");
 
         // When & Then
-        validateBadRequest(patchJson("/api/cars/" + invalidId, updateDto));
+        switch (operation) {
+            case "update":
+                CarDto updateDto = new CarDto();
+                updateDto.setBrand("Updated Car");
+                validateBadRequest(patchJson("/api/cars/" + invalidId, updateDto))
+                        .andExpect(jsonPath("$.errorCode").value("BAD_REQUEST"))
+                        .andExpect(jsonPath("$.message").value("Invalid value 'invalid' for parameter 'id'"));
+                break;
+            case "delete":
+                validateBadRequest(deleteJson("/api/cars/" + invalidId))
+                        .andExpect(jsonPath("$.errorCode").value("BAD_REQUEST"))
+                        .andExpect(jsonPath("$.message").value("Invalid value 'invalid' for parameter 'id'"));
+                break;
+        }
     }
 
     // DELETE /api/cars/{id} - Delete car
@@ -178,15 +219,6 @@ public class CarRestControllerApiTest extends ApiTestBase {
 
         // When & Then
         validateNotFound(deleteJson("/api/cars/" + nonExistentId));
-    }
-
-    @Test
-    void deleteCar_shouldReturn400_whenInvalidIdProvided() throws Exception {
-        // Given
-        String invalidId = "invalid";
-
-        // When & Then
-        validateBadRequest(deleteJson("/api/cars/" + invalidId));
     }
 
     // GET /api/cars/search - Search cars by brand
@@ -258,29 +290,24 @@ public class CarRestControllerApiTest extends ApiTestBase {
                 .andExpect(jsonPath("$.length()").value(0));
     }
 
-    @Test
-    void getCarsPage_shouldReturnEmptyList_whenInvalidSizeProvided() throws Exception {
-        // Given - invalid size parameter
-
+    // Parameterized test for pagination error scenarios
+    @ParameterizedTest(name = "Pagination error: {0}")
+    @MethodSource("invalidPaginationData")
+    void getCarsPage_shouldReturn400_whenInvalidParametersProvided(String testName, String url, String expectedErrorCode, String expectedMessage) throws Exception {
         // When & Then
-        validateSuccess(getJson("/api/cars/page?page=0&size=0"))
-                .andExpect(jsonPath("$").isArray())
-                .andExpect(jsonPath("$.length()").value(0));
+        var result = validateBadRequest(getJson(url))
+                .andExpect(jsonPath("$.errorCode").value(expectedErrorCode));
+        
+        if (expectedMessage != null) {
+            result.andExpect(jsonPath("$.message").value(expectedMessage));
+        }
     }
 
-    @Test
-    void getCarsPage_shouldReturn400_whenMissingRequiredParameters() throws Exception {
-        // Given - missing page parameter
-
-        // When & Then
-        validateBadRequest(getJson("/api/cars/page?size=5"));
-    }
-
-    @Test
-    void getCarsPage_shouldReturn400_whenInvalidParameterTypes() throws Exception {
-        // Given - invalid parameter types
-
-        // When & Then
-        validateBadRequest(getJson("/api/cars/page?page=invalid&size=invalid"));
+    static Stream<Arguments> invalidPaginationData() {
+        return Stream.of(
+                Arguments.of("Invalid size (0)", "/api/cars/page?page=0&size=0", "BAD_REQUEST", "Page must be >= 0 and size must be > 0"),
+                Arguments.of("Missing page parameter", "/api/cars/page?size=5", "VALIDATION_ERROR", "Input validation failed"),
+                Arguments.of("Invalid parameter types", "/api/cars/page?page=invalid&size=invalid", "BAD_REQUEST", null)
+        );
     }
 } 

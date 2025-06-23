@@ -4,6 +4,7 @@ import org.example.models.entity.GovEmployee;
 import org.example.repository.GovEmployeeRepository;
 import org.springframework.stereotype.Service;
 import java.util.List;
+import java.util.Optional;
 
 @Service
 public class GovEmployeeService {
@@ -17,8 +18,8 @@ public class GovEmployeeService {
         return govEmployeeRepository.findAll();
     }
 
-    public GovEmployee getById(Long id) {
-        return govEmployeeRepository.findById(id).orElse(null);
+    public Optional<GovEmployee> getById(Long id) {
+        return govEmployeeRepository.findById(id);
     }
 
     public GovEmployee add(String name) {
@@ -45,12 +46,13 @@ public class GovEmployeeService {
         return govEmployeeRepository.findAll(org.springframework.data.domain.PageRequest.of(page, size)).getContent();
     }
 
-    public GovEmployee update(Long id, String name) {
-        GovEmployee emp = getById(id);
-        if (emp == null) {
-            return null;
+    public Optional<GovEmployee> update(Long id, String name) {
+        Optional<GovEmployee> empOpt = getById(id);
+        if (empOpt.isPresent()) {
+            GovEmployee emp = empOpt.get();
+            emp.setName(name);
+            return Optional.of(govEmployeeRepository.save(emp));
         }
-        emp.setName(name);
-        return govEmployeeRepository.save(emp);
+        return Optional.empty();
     }
 } 

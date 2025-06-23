@@ -15,13 +15,13 @@ public class GovEmployeeRestControllerApiTest extends ApiTestBase {
     @Test
     void getAllEmployees_returnsOk() throws Exception {
         govEmployeeService.add("Alice");
-        validateSuccess(get("/api/gov-employees"));
+        validateSuccess(get("/api/employees"));
     }
 
     @Test
     void searchEmployees_byName_returnsFiltered() throws Exception {
         govEmployeeService.add("Charlie");
-        validateSuccess(get("/api/gov-employees/search?name=Charlie"))
+        validateSuccess(get("/api/employees/search?name=Charlie"))
                 .andExpect(jsonPath("$[0].name").value("Charlie"));
     }
 
@@ -29,7 +29,7 @@ public class GovEmployeeRestControllerApiTest extends ApiTestBase {
     void getEmployeesPage_returnsPaginated() throws Exception {
         govEmployeeService.add("Alice");
         govEmployeeService.add("Bob");
-        validateSuccess(get("/api/gov-employees/page?page=0&size=2"))
+        validateSuccess(get("/api/employees/page?page=0&size=2"))
                 .andExpect(jsonPath("$[0].name").exists())
                 .andExpect(jsonPath("$[1].name").exists());
     }

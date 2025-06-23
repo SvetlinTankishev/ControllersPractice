@@ -6,8 +6,10 @@ import org.example.service.CarService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import jakarta.validation.Valid;
 import java.util.List;
 import java.util.NoSuchElementException;
+import java.util.Optional;
 
 @RestController
 @RequestMapping("/api/cars")
@@ -19,21 +21,22 @@ public class CarRestController {
     }
 
     @GetMapping
-    public List<Car> getAllCars() {
-        return carService.getAll();
+    public ResponseEntity<List<Car>> getAllCars() {
+        return ResponseEntity.ok(carService.getAll());
     }
 
     @GetMapping("/{id}")
-    public Car getCar(@PathVariable("id") Long id) {
-        Car car = carService.getById(id);
-        if (car == null) throw new NoSuchElementException("Car not found");
-        return car;
+    public ResponseEntity<Car> getCar(@PathVariable("id") Long id) {
+        Optional<Car> car = carService.getById(id);
+        return car.map(ResponseEntity::ok)
+                  .orElseThrow(() -> new NoSuchElementException("Car not found with id: " + id));
     }
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    public Car addCar(@RequestBody CarDto dto) {
-        return carService.add(dto.getBrand());
+    public ResponseEntity<Car> addCar(@Valid @RequestBody CarDto dto) {
+        Car createdCar = carService.add(dto.getBrand());
+        return ResponseEntity.status(HttpStatus.CREATED).body(createdCar);
     }
 
     @DeleteMapping("/{id}")
@@ -42,29 +45,32 @@ public class CarRestController {
         if (deleted) {
             return ResponseEntity.noContent().build();
         } else {
-            return ResponseEntity.notFound().build();
+            throw new NoSuchElementException("Car not found with id: " + id);
         }
     }
 
     @PatchMapping("/{id}")
-    public Car patchCar(@PathVariable("id") Long id, @RequestBody CarDto dto) {
+    public ResponseEntity<Car> patchCar(@PathVariable("id") Long id, @Valid @RequestBody CarDto dto) {
         if (dto.getBrand() != null) {
-            Car updatedCar = carService.update(id, dto.getBrand());
-            if (updatedCar == null) {
-                throw new NoSuchElementException("Car not found");
-            }
-            return updatedCar;
+            Optional<Car> updatedCar = carService.update(id, dto.getBrand());
+            return updatedCar.map(ResponseEntity::ok)
+                            .orElseThrow(() -> new NoSuchElementException("Car not found with id: " + id));
         }
-        return carService.getById(id);
+        Optional<Car> car = carService.getById(id);
+        return car.map(ResponseEntity::ok)
+                  .orElseThrow(() -> new NoSuchElementException("Car not found with id: " + id));
     }
 
     @GetMapping("/search")
-    public List<Car> searchCars(@RequestParam(value = "brand", required = false) String brand) {
-        return carService.searchByBrand(brand);
+    public ResponseEntity<List<Car>> searchCars(@RequestParam(value = "brand", required = false) String brand) {
+        return ResponseEntity.ok(carService.searchByBrand(brand));
     }
 
     @GetMapping("/page")
-    public List<Car> getCarsPage(@RequestParam("page") int page, @RequestParam("size") int size) {
-        return carService.getPage(page, size);
+    public ResponseEntity<List<Car>> getCarsPage(@RequestParam("page") int page, @RequestParam("size") int size) {
+        if (page < 0 || size <= 0) {
+            throw new IllegalArgumentException("Page must be >= 0 and size must be > 0");
+        }
+        return ResponseEntity.ok(carService.getPage(page, size));
     }
 } 

@@ -4,6 +4,7 @@ import org.example.models.entity.Animal;
 import org.example.repository.AnimalRepository;
 import org.springframework.stereotype.Service;
 import java.util.List;
+import java.util.Optional;
 
 @Service
 public class AnimalService {
@@ -17,8 +18,8 @@ public class AnimalService {
         return animalRepository.findAll();
     }
 
-    public Animal getById(Long id) {
-        return animalRepository.findById(id).orElse(null);
+    public Optional<Animal> getById(Long id) {
+        return animalRepository.findById(id);
     }
 
     public Animal add(String type) {
@@ -45,12 +46,13 @@ public class AnimalService {
         return animalRepository.findAll(org.springframework.data.domain.PageRequest.of(page, size)).getContent();
     }
 
-    public Animal update(Long id, String type) {
-        Animal animal = getById(id);
-        if (animal == null) {
-            return null;
+    public Optional<Animal> update(Long id, String type) {
+        Optional<Animal> animalOpt = getById(id);
+        if (animalOpt.isPresent()) {
+            Animal animal = animalOpt.get();
+            animal.setType(type);
+            return Optional.of(animalRepository.save(animal));
         }
-        animal.setType(type);
-        return animalRepository.save(animal);
+        return Optional.empty();
     }
 } 

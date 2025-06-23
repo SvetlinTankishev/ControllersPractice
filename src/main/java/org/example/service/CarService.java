@@ -4,6 +4,7 @@ import org.example.models.entity.Car;
 import org.example.repository.CarRepository;
 import org.springframework.stereotype.Service;
 import java.util.List;
+import java.util.Optional;
 
 @Service
 public class CarService {
@@ -17,8 +18,8 @@ public class CarService {
         return carRepository.findAll();
     }
 
-    public Car getById(Long id) {
-        return carRepository.findById(id).orElse(null);
+    public Optional<Car> getById(Long id) {
+        return carRepository.findById(id);
     }
 
     public Car add(String brand) {
@@ -45,12 +46,13 @@ public class CarService {
         return carRepository.findAll(org.springframework.data.domain.PageRequest.of(page, size)).getContent();
     }
 
-    public Car update(Long id, String brand) {
-        Car car = getById(id);
-        if (car == null) {
-            return null;
+    public Optional<Car> update(Long id, String brand) {
+        Optional<Car> carOpt = getById(id);
+        if (carOpt.isPresent()) {
+            Car car = carOpt.get();
+            car.setBrand(brand);
+            return Optional.of(carRepository.save(car));
         }
-        car.setBrand(brand);
-        return carRepository.save(car);
+        return Optional.empty();
     }
 } 

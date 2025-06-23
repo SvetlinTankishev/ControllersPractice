@@ -6,8 +6,10 @@ import org.example.service.AnimalService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import jakarta.validation.Valid;
 import java.util.List;
 import java.util.NoSuchElementException;
+import java.util.Optional;
 
 @RestController
 @RequestMapping("/api/animals")
@@ -19,21 +21,22 @@ public class AnimalRestController {
     }
 
     @GetMapping
-    public List<Animal> getAllAnimals() {
-        return animalService.getAll();
+    public ResponseEntity<List<Animal>> getAllAnimals() {
+        return ResponseEntity.ok(animalService.getAll());
     }
 
     @GetMapping("/{id}")
-    public Animal getAnimal(@PathVariable("id") Long id) {
-        Animal animal = animalService.getById(id);
-        if (animal == null) throw new NoSuchElementException("Animal not found");
-        return animal;
+    public ResponseEntity<Animal> getAnimal(@PathVariable("id") Long id) {
+        Optional<Animal> animal = animalService.getById(id);
+        return animal.map(ResponseEntity::ok)
+                     .orElseThrow(() -> new NoSuchElementException("Animal not found with id: " + id));
     }
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    public Animal addAnimal(@RequestBody AnimalDto dto) {
-        return animalService.add(dto.getType());
+    public ResponseEntity<Animal> addAnimal(@Valid @RequestBody AnimalDto dto) {
+        Animal createdAnimal = animalService.add(dto.getType());
+        return ResponseEntity.status(HttpStatus.CREATED).body(createdAnimal);
     }
 
     @DeleteMapping("/{id}")
@@ -42,29 +45,32 @@ public class AnimalRestController {
         if (deleted) {
             return ResponseEntity.noContent().build();
         } else {
-            return ResponseEntity.notFound().build();
+            throw new NoSuchElementException("Animal not found with id: " + id);
         }
     }
 
     @PatchMapping("/{id}")
-    public Animal patchAnimal(@PathVariable("id") Long id, @RequestBody AnimalDto dto) {
+    public ResponseEntity<Animal> patchAnimal(@PathVariable("id") Long id, @Valid @RequestBody AnimalDto dto) {
         if (dto.getType() != null) {
-            Animal updatedAnimal = animalService.update(id, dto.getType());
-            if (updatedAnimal == null) {
-                throw new NoSuchElementException("Animal not found");
-            }
-            return updatedAnimal;
+            Optional<Animal> updatedAnimal = animalService.update(id, dto.getType());
+            return updatedAnimal.map(ResponseEntity::ok)
+                               .orElseThrow(() -> new NoSuchElementException("Animal not found with id: " + id));
         }
-        return animalService.getById(id);
+        Optional<Animal> animal = animalService.getById(id);
+        return animal.map(ResponseEntity::ok)
+                     .orElseThrow(() -> new NoSuchElementException("Animal not found with id: " + id));
     }
 
     @GetMapping("/search")
-    public List<Animal> searchAnimals(@RequestParam(value = "type", required = false) String type) {
-        return animalService.searchByType(type);
+    public ResponseEntity<List<Animal>> searchAnimals(@RequestParam(value = "type", required = false) String type) {
+        return ResponseEntity.ok(animalService.searchByType(type));
     }
 
     @GetMapping("/page")
-    public List<Animal> getAnimalsPage(@RequestParam("page") int page, @RequestParam("size") int size) {
-        return animalService.getPage(page, size);
+    public ResponseEntity<List<Animal>> getAnimalsPage(@RequestParam("page") int page, @RequestParam("size") int size) {
+        if (page < 0 || size <= 0) {
+            throw new IllegalArgumentException("Page must be >= 0 and size must be > 0");
+        }
+        return ResponseEntity.ok(animalService.getPage(page, size));
     }
 } 

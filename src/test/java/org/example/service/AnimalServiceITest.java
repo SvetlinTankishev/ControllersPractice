@@ -6,6 +6,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
+import java.util.Optional;
 import static org.assertj.core.api.Assertions.assertThat;
 import org.example.config.IntegrationTestBase;
 
@@ -16,34 +17,78 @@ public class AnimalServiceITest extends IntegrationTestBase {
     private AnimalService animalService;
 
     @Test
-    void addAndGetAnimal() {
-        Animal animal = animalService.add("parrot");
-        assertThat(animal.getId()).isNotNull();
-        Animal found = animalService.getById(animal.getId());
-        assertThat(found).isNotNull();
-        assertThat(found.getType()).isEqualTo("parrot");
+    void addAndGetAnimal_shouldCreateAndRetrieveAnimal_whenValidDataProvided() {
+        // Given
+        String type = "parrot";
+        
+        // When
+        Animal savedAnimal = animalService.add(type);
+        Optional<Animal> retrievedAnimal = animalService.getById(savedAnimal.getId());
+        
+        // Then
+        assertThat(savedAnimal.getId()).isNotNull();
+        assertThat(savedAnimal.getType()).isEqualTo(type);
+        assertThat(retrievedAnimal).isPresent();
+        assertThat(retrievedAnimal.get().getType()).isEqualTo(type);
+        assertThat(retrievedAnimal.get().getCreatedAt()).isNotNull();
+        assertThat(retrievedAnimal.get().getUpdatedAt()).isNotNull();
     }
 
     @Test
-    void deleteAnimal() {
-        Animal animal = animalService.add("cat");
-        boolean deleted = animalService.delete(animal.getId());
+    void deleteAnimal_shouldRemoveAnimal_whenAnimalExists() {
+        // Given
+        Animal savedAnimal = animalService.add("cat");
+        
+        // When
+        boolean deleted = animalService.delete(savedAnimal.getId());
+        Optional<Animal> retrievedAnimal = animalService.getById(savedAnimal.getId());
+        
+        // Then
         assertThat(deleted).isTrue();
-        assertThat(animalService.getById(animal.getId())).isNull();
+        assertThat(retrievedAnimal).isEmpty();
     }
 
     @Test
-    void searchByType() {
+    void searchByType_shouldReturnMatchingAnimals_whenTypeExists() {
+        // Given
         animalService.add("lion");
+        animalService.add("lioness");
+        animalService.add("cat");
+        
+        // When
         List<Animal> lions = animalService.searchByType("lion");
-        assertThat(lions).anyMatch(a -> a.getType().equals("lion"));
+        
+        // Then
+        assertThat(lions).hasSize(2);
+        assertThat(lions).allMatch(animal -> animal.getType().contains("lion"));
     }
 
     @Test
-    void getPage() {
+    void updateAnimal_shouldModifyType_whenAnimalExists() {
+        // Given
+        Animal originalAnimal = animalService.add("cat");
+        String newType = "tiger";
+        
+        // When
+        Optional<Animal> updatedAnimal = animalService.update(originalAnimal.getId(), newType);
+        
+        // Then
+        assertThat(updatedAnimal).isPresent();
+        assertThat(updatedAnimal.get().getType()).isEqualTo(newType);
+        assertThat(updatedAnimal.get().getId()).isEqualTo(originalAnimal.getId());
+    }
+
+    @Test
+    void getPage_shouldReturnPaginatedResults_whenValidParametersProvided() {
+        // Given
         animalService.add("cat");
         animalService.add("dog");
-        List<Animal> page = animalService.getPage(0, 2);
-        assertThat(page.size()).isLessThanOrEqualTo(2);
+        animalService.add("bird");
+        
+        // When
+        List<Animal> firstPage = animalService.getPage(0, 2);
+        
+        // Then
+        assertThat(firstPage).hasSizeLessThanOrEqualTo(2);
     }
 } 
