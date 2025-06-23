@@ -5,12 +5,16 @@ import org.example.repository.AnimalRepository;
 import org.example.service.AnimalService;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Stream;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.*;
 
@@ -26,8 +30,8 @@ class AnimalServiceUTest {
     void getAll_shouldReturnAllAnimals_whenRepositoryReturnsData() {
         // Given
         List<Animal> expectedAnimals = Arrays.asList(
-            new Animal(1L, "cat"), 
-            new Animal(2L, "dog")
+            new Animal(1L, "Lion"), 
+            new Animal(2L, "Tiger")
         );
         when(animalRepository.findAll()).thenReturn(expectedAnimals);
         
@@ -40,40 +44,34 @@ class AnimalServiceUTest {
         verify(animalRepository).findAll();
     }
 
-    @Test
-    void getById_shouldReturnOptionalWithAnimal_whenAnimalExists() {
+    @ParameterizedTest(name = "Get by ID: {0}")
+    @MethodSource("getByIdData")
+    void getById_shouldHandleVariousScenarios(String testName, Long animalId, Optional<Animal> repositoryResult, boolean shouldBePresent, String expectedType) {
         // Given
-        Long animalId = 1L;
-        Animal expectedAnimal = new Animal(animalId, "cat");
-        when(animalRepository.findById(animalId)).thenReturn(Optional.of(expectedAnimal));
+        when(animalRepository.findById(animalId)).thenReturn(repositoryResult);
         
         // When
         Optional<Animal> result = animalService.getById(animalId);
         
         // Then
-        assertThat(result).isPresent();
-        assertThat(result.get().getType()).isEqualTo("cat");
+        assertThat(result.isPresent()).isEqualTo(shouldBePresent);
+        if (shouldBePresent) {
+            assertThat(result.get().getType()).isEqualTo(expectedType);
+        }
         verify(animalRepository).findById(animalId);
     }
 
-    @Test
-    void getById_shouldReturnEmptyOptional_whenAnimalDoesNotExist() {
-        // Given
-        Long nonExistentId = 999L;
-        when(animalRepository.findById(nonExistentId)).thenReturn(Optional.empty());
-        
-        // When
-        Optional<Animal> result = animalService.getById(nonExistentId);
-        
-        // Then
-        assertThat(result).isEmpty();
-        verify(animalRepository).findById(nonExistentId);
+    static Stream<Arguments> getByIdData() {
+        return Stream.of(
+                Arguments.of("Animal exists", 1L, Optional.of(new Animal(1L, "Lion")), true, "Lion"),
+                Arguments.of("Animal does not exist", 999L, Optional.empty(), false, null)
+        );
     }
 
     @Test
     void add_shouldReturnSavedAnimal_whenValidTypeProvided() {
         // Given
-        String type = "parrot";
+        String type = "Elephant";
         Animal savedAnimal = new Animal(3L, type);
         when(animalRepository.save(any(Animal.class))).thenReturn(savedAnimal);
         
@@ -86,119 +84,125 @@ class AnimalServiceUTest {
         verify(animalRepository).save(any(Animal.class));
     }
 
-    @Test
-    void delete_shouldReturnTrue_whenAnimalExists() {
+    @ParameterizedTest(name = "Delete animal: {0}")
+    @MethodSource("deleteData")
+    void delete_shouldHandleVariousScenarios(String testName, Long animalId, boolean existsInRepo, boolean expectedResult, boolean shouldCallDelete) {
         // Given
-        Long animalId = 1L;
-        when(animalRepository.existsById(animalId)).thenReturn(true);
-        doNothing().when(animalRepository).deleteById(animalId);
+        when(animalRepository.existsById(animalId)).thenReturn(existsInRepo);
+        if (shouldCallDelete) {
+            doNothing().when(animalRepository).deleteById(animalId);
+        }
         
         // When
         boolean result = animalService.delete(animalId);
         
         // Then
-        assertThat(result).isTrue();
+        assertThat(result).isEqualTo(expectedResult);
         verify(animalRepository).existsById(animalId);
-        verify(animalRepository).deleteById(animalId);
+        if (shouldCallDelete) {
+            verify(animalRepository).deleteById(animalId);
+        } else {
+            verify(animalRepository, never()).deleteById(animalId);
+        }
     }
 
-    @Test
-    void delete_shouldReturnFalse_whenAnimalDoesNotExist() {
-        // Given
-        Long nonExistentId = 999L;
-        when(animalRepository.existsById(nonExistentId)).thenReturn(false);
-        
-        // When
-        boolean result = animalService.delete(nonExistentId);
-        
-        // Then
-        assertThat(result).isFalse();
-        verify(animalRepository).existsById(nonExistentId);
-        verify(animalRepository, never()).deleteById(nonExistentId);
+    static Stream<Arguments> deleteData() {
+        return Stream.of(
+                Arguments.of("Animal exists", 1L, true, true, true),
+                Arguments.of("Animal does not exist", 999L, false, false, false)
+        );
     }
 
-    @Test
-    void update_shouldReturnOptionalWithUpdatedAnimal_whenAnimalExists() {
+    @ParameterizedTest(name = "Update animal: {0}")
+    @MethodSource("updateData")
+    void update_shouldHandleVariousScenarios(String testName, Long animalId, Optional<Animal> repositoryResult, String newType, boolean shouldBePresent, boolean shouldCallSave) {
         // Given
-        Long animalId = 1L;
-        String newType = "Updated Type";
-        Animal existingAnimal = new Animal(animalId, "Old Type");
-        Animal updatedAnimal = new Animal(animalId, newType);
-        
-        when(animalRepository.findById(animalId)).thenReturn(Optional.of(existingAnimal));
-        when(animalRepository.save(existingAnimal)).thenReturn(updatedAnimal);
+        when(animalRepository.findById(animalId)).thenReturn(repositoryResult);
+        if (shouldCallSave && repositoryResult.isPresent()) {
+            Animal updatedAnimal = new Animal(animalId, newType);
+            when(animalRepository.save(repositoryResult.get())).thenReturn(updatedAnimal);
+        }
         
         // When
         Optional<Animal> result = animalService.update(animalId, newType);
         
         // Then
-        assertThat(result).isPresent();
-        assertThat(result.get().getType()).isEqualTo(newType);
+        assertThat(result.isPresent()).isEqualTo(shouldBePresent);
+        if (shouldBePresent) {
+            assertThat(result.get().getType()).isEqualTo(newType);
+        }
         verify(animalRepository).findById(animalId);
-        verify(animalRepository).save(existingAnimal);
+        if (shouldCallSave) {
+            verify(animalRepository).save(any(Animal.class));
+        } else {
+            verify(animalRepository, never()).save(any(Animal.class));
+        }
     }
 
-    @Test
-    void update_shouldReturnEmptyOptional_whenAnimalDoesNotExist() {
-        // Given
-        Long nonExistentId = 999L;
-        String newType = "Updated Type";
-        when(animalRepository.findById(nonExistentId)).thenReturn(Optional.empty());
-        
-        // When
-        Optional<Animal> result = animalService.update(nonExistentId, newType);
-        
-        // Then
-        assertThat(result).isEmpty();
-        verify(animalRepository).findById(nonExistentId);
-        verify(animalRepository, never()).save(any(Animal.class));
+    static Stream<Arguments> updateData() {
+        return Stream.of(
+                Arguments.of("Animal exists", 1L, Optional.of(new Animal(1L, "Old Type")), "Updated Type", true, true),
+                Arguments.of("Animal does not exist", 999L, Optional.empty(), "Updated Type", false, false)
+        );
     }
 
-    @Test
-    void searchByType_shouldReturnFilteredAnimals_whenTypeProvided() {
+    @ParameterizedTest(name = "Search by type: {0}")
+    @MethodSource("searchByTypeData")
+    void searchByType_shouldHandleVariousScenarios(String testName, String searchType, List<Animal> expectedAnimals, boolean shouldCallSpecificSearch) {
         // Given
-        String searchType = "dog";
-        List<Animal> expectedAnimals = Arrays.asList(new Animal(1L, "dog"));
-        when(animalRepository.findByTypeContainingIgnoreCase(searchType)).thenReturn(expectedAnimals);
+        if (shouldCallSpecificSearch) {
+            when(animalRepository.findByTypeContainingIgnoreCase(searchType)).thenReturn(expectedAnimals);
+        } else {
+            when(animalRepository.findAll()).thenReturn(expectedAnimals);
+        }
         
         // When
         List<Animal> result = animalService.searchByType(searchType);
         
         // Then
-        assertThat(result).hasSize(1);
+        assertThat(result).hasSize(expectedAnimals.size());
         assertThat(result).containsExactlyElementsOf(expectedAnimals);
-        verify(animalRepository).findByTypeContainingIgnoreCase(searchType);
+        
+        if (shouldCallSpecificSearch) {
+            verify(animalRepository).findByTypeContainingIgnoreCase(searchType);
+            verify(animalRepository, never()).findAll();
+        } else {
+            verify(animalRepository).findAll();
+            verify(animalRepository, never()).findByTypeContainingIgnoreCase(any());
+        }
+    }
+
+    static Stream<Arguments> searchByTypeData() {
+        List<Animal> lionAnimals = Arrays.asList(new Animal(1L, "Lion"));
+        List<Animal> allAnimals = Arrays.asList(new Animal(1L, "Lion"), new Animal(2L, "Tiger"));
+        List<Animal> emptyAnimals = Arrays.asList(); // No animals match "   "
+        
+        return Stream.of(
+                Arguments.of("Specific type provided", "Lion", lionAnimals, true),
+                Arguments.of("Type is null", null, allAnimals, false),
+                Arguments.of("Type is empty", "", allAnimals, false),
+                Arguments.of("Type is blank spaces", "   ", emptyAnimals, true)
+        );
     }
 
     @Test
-    void searchByType_shouldReturnAllAnimals_whenTypeIsNull() {
+    void getPage_shouldReturnPagedResults_whenValidParametersProvided() {
         // Given
-        List<Animal> allAnimals = Arrays.asList(new Animal(1L, "cat"), new Animal(2L, "dog"));
-        when(animalRepository.findAll()).thenReturn(allAnimals);
+        int page = 0;
+        int size = 5;
+        List<Animal> expectedAnimals = Arrays.asList(new Animal(1L, "Lion"), new Animal(2L, "Tiger"));
+        org.springframework.data.domain.PageRequest pageRequest = org.springframework.data.domain.PageRequest.of(page, size);
+        org.springframework.data.domain.Page<Animal> mockPage = mock(org.springframework.data.domain.Page.class);
+        when(animalRepository.findAll(pageRequest)).thenReturn(mockPage);
+        when(mockPage.getContent()).thenReturn(expectedAnimals);
         
         // When
-        List<Animal> result = animalService.searchByType(null);
+        List<Animal> result = animalService.getPage(page, size);
         
         // Then
         assertThat(result).hasSize(2);
-        assertThat(result).containsExactlyElementsOf(allAnimals);
-        verify(animalRepository).findAll();
-        verify(animalRepository, never()).findByTypeContainingIgnoreCase(any());
-    }
-
-    @Test
-    void searchByType_shouldReturnAllAnimals_whenTypeIsEmpty() {
-        // Given
-        List<Animal> allAnimals = Arrays.asList(new Animal(1L, "cat"), new Animal(2L, "dog"));
-        when(animalRepository.findAll()).thenReturn(allAnimals);
-        
-        // When
-        List<Animal> result = animalService.searchByType("");
-        
-        // Then
-        assertThat(result).hasSize(2);
-        assertThat(result).containsExactlyElementsOf(allAnimals);
-        verify(animalRepository).findAll();
-        verify(animalRepository, never()).findByTypeContainingIgnoreCase(any());
+        assertThat(result).containsExactlyElementsOf(expectedAnimals);
+        verify(animalRepository).findAll(pageRequest);
+        verify(mockPage).getContent();
     }
 } 
