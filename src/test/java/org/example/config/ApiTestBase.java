@@ -1,6 +1,7 @@
 package org.example.config;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.example.action.core.ActionDispatcher;
 import org.example.repository.AnimalRepository;
 import org.example.repository.CarRepository;
 import org.example.repository.GovEmployeeRepository;
@@ -30,6 +31,9 @@ public abstract class ApiTestBase {
 
     @Autowired
     protected ObjectMapper objectMapper;
+    
+    @Autowired
+    protected ActionDispatcher actionDispatcher;
 
     @Autowired
     protected AnimalRepository animalRepository;
@@ -97,6 +101,14 @@ public abstract class ApiTestBase {
     }
 
     /**
+     * Helper method to create a POST request with no content for action endpoints
+     */
+    protected MockHttpServletRequestBuilder postJson(String url) throws Exception {
+        return MockMvcRequestBuilders.post(url)
+                .contentType(MediaType.APPLICATION_JSON);
+    }
+
+    /**
      * Helper method to create a PATCH request with JSON content
      */
     protected MockHttpServletRequestBuilder patchJson(String url, Object content) throws Exception {
@@ -154,6 +166,27 @@ public abstract class ApiTestBase {
      */
     protected ResultActions expectFieldDoesNotExist(ResultActions resultActions, String fieldPath) throws Exception {
         return resultActions.andExpect(jsonPath(fieldPath).doesNotExist());
+    }
+
+    /**
+     * Validates that an action response contains success=true
+     */
+    protected ResultActions expectActionSuccess(ResultActions resultActions) throws Exception {
+        return resultActions.andExpect(jsonPath("$.success").value(true));
+    }
+
+    /**
+     * Validates that an action response contains success=false
+     */
+    protected ResultActions expectActionFailure(ResultActions resultActions) throws Exception {
+        return resultActions.andExpect(jsonPath("$.success").value(false));
+    }
+
+    /**
+     * Validates that an action response contains a specific message
+     */
+    protected ResultActions expectActionMessage(ResultActions resultActions, String expectedMessage) throws Exception {
+        return resultActions.andExpect(jsonPath("$.message").value(expectedMessage));
     }
 
     /**
