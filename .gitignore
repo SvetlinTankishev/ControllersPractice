@@ -39,5 +39,9 @@ bin/
 .vscode/
 .vscode/settings.json
 
+### Log files ###
+app.log
+*.log
+
 ### Mac OS ###
 .DS_Store
