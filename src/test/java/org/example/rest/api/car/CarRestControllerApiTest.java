@@ -181,7 +181,7 @@ public class CarRestControllerApiTest extends ApiTestBase {
 
     // Parameterized test for invalid ID scenarios
     @ParameterizedTest(name = "Invalid ID test: {0}")
-    @ValueSource(strings = {"update", "delete"})
+    @ValueSource(strings = {"update", "replace", "delete"})
     void shouldReturn400_whenInvalidIdProvided(String operation) throws Exception {
         // Given
         String invalidId = "invalid";
@@ -192,6 +192,13 @@ public class CarRestControllerApiTest extends ApiTestBase {
                 CarDto updateDto = new CarDto();
                 updateDto.setBrand("Updated Car");
                 validateBadRequest(patchJson("/api/cars/" + invalidId, updateDto))
+                        .andExpect(jsonPath("$.errorCode").value("BAD_REQUEST"))
+                        .andExpect(jsonPath("$.message").value("Invalid value 'invalid' for parameter 'id'"));
+                break;
+            case "replace":
+                CarDto replaceDto = new CarDto();
+                replaceDto.setBrand("Replaced Car");
+                validateBadRequest(putJson("/api/cars/" + invalidId, replaceDto))
                         .andExpect(jsonPath("$.errorCode").value("BAD_REQUEST"))
                         .andExpect(jsonPath("$.message").value("Invalid value 'invalid' for parameter 'id'"));
                 break;
@@ -309,5 +316,72 @@ public class CarRestControllerApiTest extends ApiTestBase {
                 Arguments.of("Missing page parameter", "/api/cars/page?size=5", "VALIDATION_ERROR", "Input validation failed"),
                 Arguments.of("Invalid parameter types", "/api/cars/page?page=invalid&size=invalid", "BAD_REQUEST", null)
         );
+    }
+
+    // PUT /api/cars/{id} - Replace car (with data safety)
+    @Test
+    void replaceCar_shouldReturnUpdatedCar_whenValidDataProvided() throws Exception {
+        // Given
+        CarDto replaceDto = new CarDto();
+        replaceDto.setBrand("Replaced Car");
+
+        // When & Then
+        validateSuccess(putJson("/api/cars/" + testCar.getId(), replaceDto))
+                .andExpect(jsonPath("$.id").value(testCar.getId()))
+                .andExpect(jsonPath("$.brand").value("Replaced Car"));
+    }
+
+    @Test
+    void replaceCar_shouldReturn404_whenCarDoesNotExist() throws Exception {
+        // Given
+        Long nonExistentId = 999L;
+        CarDto replaceDto = new CarDto();
+        replaceDto.setBrand("Replaced Car");
+
+        // When & Then
+        validateNotFound(putJson("/api/cars/" + nonExistentId, replaceDto));
+    }
+
+    @Test
+    void replaceCar_shouldReturn400_whenNoBrandProvided() throws Exception {
+        // Given - empty DTO should fail validation to prevent data corruption
+        CarDto emptyDto = new CarDto();
+
+        // When & Then
+        validateBadRequest(putJson("/api/cars/" + testCar.getId(), emptyDto))
+                .andExpect(jsonPath("$.errorCode").value("VALIDATION_ERROR"))
+                .andExpect(jsonPath("$.message").value("Input validation failed"))
+                .andExpect(jsonPath("$.details").isArray())
+                .andExpect(jsonPath("$.details[0]").value("brand: Brand cannot be blank"));
+    }
+
+    @Test
+    void replaceCar_shouldReturn400_whenInvalidIdProvided() throws Exception {
+        // Given
+        String invalidId = "invalid";
+        CarDto replaceDto = new CarDto();
+        replaceDto.setBrand("Replaced Car");
+
+        // When & Then
+        validateBadRequest(putJson("/api/cars/" + invalidId, replaceDto))
+                .andExpect(jsonPath("$.errorCode").value("BAD_REQUEST"))
+                .andExpect(jsonPath("$.message").value("Invalid value 'invalid' for parameter 'id'"));
+    }
+
+    @ParameterizedTest(name = "PUT car validation: {0}")
+    @MethodSource("invalidCarCreationData")
+    void replaceCar_shouldReturn400_whenInvalidDataProvided(String testName, String brand, String expectedError) throws Exception {
+        // Given
+        CarDto invalidDto = new CarDto();
+        if (brand != null) {
+            invalidDto.setBrand(brand);
+        }
+
+        // When & Then
+        validateBadRequest(putJson("/api/cars/" + testCar.getId(), invalidDto))
+                .andExpect(jsonPath("$.errorCode").value("VALIDATION_ERROR"))
+                .andExpect(jsonPath("$.message").value("Input validation failed"))
+                .andExpect(jsonPath("$.details").isArray())
+                .andExpect(jsonPath("$.details[0]").value(expectedError));
     }
 } 

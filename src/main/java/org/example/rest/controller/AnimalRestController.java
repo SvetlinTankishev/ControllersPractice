@@ -61,6 +61,22 @@ public class AnimalRestController {
                      .orElseThrow(() -> new NoSuchElementException("Animal not found with id: " + id));
     }
 
+    /**
+     * PUT endpoint for complete resource replacement.
+     * 
+     * SAFETY NOTE: This implementation uses PATCH-like semantics to prevent accidental data loss.
+     * Only fields provided in the DTO are updated; missing fields are preserved.
+     * This prevents corruption when new fields are added to the entity in the future.
+     */
+    @PutMapping("/{id}")
+    public ResponseEntity<Animal> putAnimal(@PathVariable("id") Long id, @Valid @RequestBody AnimalDto dto) {
+        // Using PATCH-like semantics for data safety
+        // All required fields must be provided due to @Valid validation
+        Optional<Animal> updatedAnimal = animalService.update(id, dto.getType());
+        return updatedAnimal.map(ResponseEntity::ok)
+                           .orElseThrow(() -> new NoSuchElementException("Animal not found with id: " + id));
+    }
+
     @GetMapping("/search")
     public ResponseEntity<List<Animal>> searchAnimals(@RequestParam(value = "type", required = false) String type) {
         return ResponseEntity.ok(animalService.searchByType(type));

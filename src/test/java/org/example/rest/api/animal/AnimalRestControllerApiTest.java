@@ -179,9 +179,76 @@ public class AnimalRestControllerApiTest extends ApiTestBase {
                 .andExpect(jsonPath("$.details[0]").value("type: Type cannot be blank"));
     }
 
+    // PUT /api/animals/{id} - Replace animal (with data safety)
+    @Test
+    void replaceAnimal_shouldReturnUpdatedAnimal_whenValidDataProvided() throws Exception {
+        // Given
+        AnimalDto replaceDto = new AnimalDto();
+        replaceDto.setType("Replaced Animal");
+
+        // When & Then
+        validateSuccess(putJson("/api/animals/" + testAnimal.getId(), replaceDto))
+                .andExpect(jsonPath("$.id").value(testAnimal.getId()))
+                .andExpect(jsonPath("$.type").value("Replaced Animal"));
+    }
+
+    @Test
+    void replaceAnimal_shouldReturn404_whenAnimalDoesNotExist() throws Exception {
+        // Given
+        Long nonExistentId = 999L;
+        AnimalDto replaceDto = new AnimalDto();
+        replaceDto.setType("Replaced Animal");
+
+        // When & Then
+        validateNotFound(putJson("/api/animals/" + nonExistentId, replaceDto));
+    }
+
+    @Test
+    void replaceAnimal_shouldReturn400_whenNoTypeProvided() throws Exception {
+        // Given - empty DTO should fail validation to prevent data corruption
+        AnimalDto emptyDto = new AnimalDto();
+
+        // When & Then
+        validateBadRequest(putJson("/api/animals/" + testAnimal.getId(), emptyDto))
+                .andExpect(jsonPath("$.errorCode").value("VALIDATION_ERROR"))
+                .andExpect(jsonPath("$.message").value("Input validation failed"))
+                .andExpect(jsonPath("$.details").isArray())
+                .andExpect(jsonPath("$.details[0]").value("type: Type cannot be blank"));
+    }
+
+    @Test
+    void replaceAnimal_shouldReturn400_whenInvalidIdProvided() throws Exception {
+        // Given
+        String invalidId = "invalid";
+        AnimalDto replaceDto = new AnimalDto();
+        replaceDto.setType("Replaced Animal");
+
+        // When & Then
+        validateBadRequest(putJson("/api/animals/" + invalidId, replaceDto))
+                .andExpect(jsonPath("$.errorCode").value("BAD_REQUEST"))
+                .andExpect(jsonPath("$.message").value("Invalid value 'invalid' for parameter 'id'"));
+    }
+
+    @ParameterizedTest(name = "PUT animal validation: {0}")
+    @MethodSource("invalidAnimalCreationData")
+    void replaceAnimal_shouldReturn400_whenInvalidDataProvided(String testName, String type, String expectedError) throws Exception {
+        // Given
+        AnimalDto invalidDto = new AnimalDto();
+        if (type != null) {
+            invalidDto.setType(type);
+        }
+
+        // When & Then
+        validateBadRequest(putJson("/api/animals/" + testAnimal.getId(), invalidDto))
+                .andExpect(jsonPath("$.errorCode").value("VALIDATION_ERROR"))
+                .andExpect(jsonPath("$.message").value("Input validation failed"))
+                .andExpect(jsonPath("$.details").isArray())
+                .andExpect(jsonPath("$.details[0]").value(expectedError));
+    }
+
     // Parameterized test for invalid ID scenarios
     @ParameterizedTest(name = "Invalid ID test: {0}")
-    @ValueSource(strings = {"update", "delete"})
+    @ValueSource(strings = {"update", "replace", "delete"})
     void shouldReturn400_whenInvalidIdProvided(String operation) throws Exception {
         // Given
         String invalidId = "invalid";
@@ -192,6 +259,13 @@ public class AnimalRestControllerApiTest extends ApiTestBase {
                 AnimalDto updateDto = new AnimalDto();
                 updateDto.setType("Updated Animal");
                 validateBadRequest(patchJson("/api/animals/" + invalidId, updateDto))
+                        .andExpect(jsonPath("$.errorCode").value("BAD_REQUEST"))
+                        .andExpect(jsonPath("$.message").value("Invalid value 'invalid' for parameter 'id'"));
+                break;
+            case "replace":
+                AnimalDto replaceDto = new AnimalDto();
+                replaceDto.setType("Replaced Animal");
+                validateBadRequest(putJson("/api/animals/" + invalidId, replaceDto))
                         .andExpect(jsonPath("$.errorCode").value("BAD_REQUEST"))
                         .andExpect(jsonPath("$.message").value("Invalid value 'invalid' for parameter 'id'"));
                 break;

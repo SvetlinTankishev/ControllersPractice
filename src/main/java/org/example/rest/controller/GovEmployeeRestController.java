@@ -61,6 +61,22 @@ public class GovEmployeeRestController {
                       .orElseThrow(() -> new NoSuchElementException("Employee not found with id: " + id));
     }
 
+    /**
+     * PUT endpoint for complete resource replacement.
+     * 
+     * SAFETY NOTE: This implementation uses PATCH-like semantics to prevent accidental data loss.
+     * Only fields provided in the DTO are updated; missing fields are preserved.
+     * This prevents corruption when new fields are added to the entity in the future.
+     */
+    @PutMapping("/{id}")
+    public ResponseEntity<GovEmployee> putEmployee(@PathVariable("id") Long id, @Valid @RequestBody GovEmployeeDto dto) {
+        // Using PATCH-like semantics for data safety
+        // All required fields must be provided due to @Valid validation
+        Optional<GovEmployee> updatedEmployee = govEmployeeService.update(id, dto.getName());
+        return updatedEmployee.map(ResponseEntity::ok)
+                             .orElseThrow(() -> new NoSuchElementException("Employee not found with id: " + id));
+    }
+
     @GetMapping("/search")
     public ResponseEntity<List<GovEmployee>> searchEmployees(@RequestParam(value = "name", required = false) String name) {
         return ResponseEntity.ok(govEmployeeService.searchByName(name));

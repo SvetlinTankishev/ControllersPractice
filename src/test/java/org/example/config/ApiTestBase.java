@@ -118,6 +118,15 @@ public abstract class ApiTestBase {
     }
 
     /**
+     * Helper method to create a PUT request with JSON content
+     */
+    protected MockHttpServletRequestBuilder putJson(String url, Object content) throws Exception {
+        return MockMvcRequestBuilders.put(url)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(toJson(content));
+    }
+
+    /**
      * Helper method to create a GET request
      */
     protected MockHttpServletRequestBuilder getJson(String url) {

@@ -18,6 +18,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -195,7 +196,7 @@ public class GovEmployeeRestControllerApiTest extends ApiTestBase {
 
     // Parameterized test for invalid ID scenarios
     @ParameterizedTest(name = "Invalid ID test: {0}")
-    @ValueSource(strings = {"update", "delete"})
+    @ValueSource(strings = {"update", "replace", "delete"})
     void shouldReturn400_whenInvalidIdProvided(String operation) throws Exception {
         // Given
         String invalidId = "invalid";
@@ -208,6 +209,13 @@ public class GovEmployeeRestControllerApiTest extends ApiTestBase {
                 validateBadRequest(patch("/api/employees/" + invalidId)
                         .contentType("application/json")
                         .content(objectMapper.writeValueAsString(updateDto)))
+                        .andExpect(jsonPath("$.errorCode").value("BAD_REQUEST"))
+                        .andExpect(jsonPath("$.message").value("Invalid value 'invalid' for parameter 'id'"));
+                break;
+            case "replace":
+                GovEmployeeDto replaceDto = new GovEmployeeDto();
+                replaceDto.setName("Replaced Employee");
+                validateBadRequest(putJson("/api/employees/" + invalidId, replaceDto))
                         .andExpect(jsonPath("$.errorCode").value("BAD_REQUEST"))
                         .andExpect(jsonPath("$.message").value("Invalid value 'invalid' for parameter 'id'"));
                 break;
@@ -325,5 +333,72 @@ public class GovEmployeeRestControllerApiTest extends ApiTestBase {
                 Arguments.of("Missing page parameter", "/api/employees/page?size=5", "VALIDATION_ERROR", "Input validation failed"),
                 Arguments.of("Invalid parameter types", "/api/employees/page?page=invalid&size=invalid", "BAD_REQUEST", null)
         );
+    }
+
+    // PUT /api/employees/{id} - Replace employee (with data safety)
+    @Test
+    void replaceEmployee_shouldReturnUpdatedEmployee_whenValidDataProvided() throws Exception {
+        // Given
+        GovEmployeeDto replaceDto = new GovEmployeeDto();
+        replaceDto.setName("Replaced Employee");
+
+        // When & Then
+        validateSuccess(putJson("/api/employees/" + testEmployee.getId(), replaceDto))
+                .andExpect(jsonPath("$.id").value(testEmployee.getId()))
+                .andExpect(jsonPath("$.name").value("Replaced Employee"));
+    }
+
+    @Test
+    void replaceEmployee_shouldReturn404_whenEmployeeDoesNotExist() throws Exception {
+        // Given
+        Long nonExistentId = 999L;
+        GovEmployeeDto replaceDto = new GovEmployeeDto();
+        replaceDto.setName("Replaced Employee");
+
+        // When & Then
+        validateNotFound(putJson("/api/employees/" + nonExistentId, replaceDto));
+    }
+
+    @Test
+    void replaceEmployee_shouldReturn400_whenNoNameProvided() throws Exception {
+        // Given - empty DTO should fail validation to prevent data corruption
+        GovEmployeeDto emptyDto = new GovEmployeeDto();
+
+        // When & Then
+        validateBadRequest(putJson("/api/employees/" + testEmployee.getId(), emptyDto))
+                .andExpect(jsonPath("$.errorCode").value("VALIDATION_ERROR"))
+                .andExpect(jsonPath("$.message").value("Input validation failed"))
+                .andExpect(jsonPath("$.details").isArray())
+                .andExpect(jsonPath("$.details[0]").value("name: Name cannot be blank"));
+    }
+
+    @Test
+    void replaceEmployee_shouldReturn400_whenInvalidIdProvided() throws Exception {
+        // Given
+        String invalidId = "invalid";
+        GovEmployeeDto replaceDto = new GovEmployeeDto();
+        replaceDto.setName("Replaced Employee");
+
+        // When & Then
+        validateBadRequest(putJson("/api/employees/" + invalidId, replaceDto))
+                .andExpect(jsonPath("$.errorCode").value("BAD_REQUEST"))
+                .andExpect(jsonPath("$.message").value("Invalid value 'invalid' for parameter 'id'"));
+    }
+
+    @ParameterizedTest(name = "PUT employee validation: {0}")
+    @MethodSource("invalidEmployeeCreationData")
+    void replaceEmployee_shouldReturn400_whenInvalidDataProvided(String testName, String name, String expectedError) throws Exception {
+        // Given
+        GovEmployeeDto invalidDto = new GovEmployeeDto();
+        if (name != null) {
+            invalidDto.setName(name);
+        }
+
+        // When & Then
+        validateBadRequest(putJson("/api/employees/" + testEmployee.getId(), invalidDto))
+                .andExpect(jsonPath("$.errorCode").value("VALIDATION_ERROR"))
+                .andExpect(jsonPath("$.message").value("Input validation failed"))
+                .andExpect(jsonPath("$.details").isArray())
+                .andExpect(jsonPath("$.details[0]").value(expectedError));
     }
 } 
