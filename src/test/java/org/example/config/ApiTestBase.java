@@ -16,6 +16,8 @@ import org.springframework.test.web.servlet.ResultActions;
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
 
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -43,6 +45,26 @@ public abstract class ApiTestBase {
 
     @Autowired
     protected GovEmployeeRepository govEmployeeRepository;
+
+    /**
+     * Ensures database is clean before any tests run
+     */
+    @BeforeAll
+    static void globalSetUp(@Autowired AnimalRepository animalRepository, 
+                           @Autowired CarRepository carRepository, 
+                           @Autowired GovEmployeeRepository govEmployeeRepository) {
+        animalRepository.deleteAll();
+        carRepository.deleteAll();
+        govEmployeeRepository.deleteAll();
+    }
+
+    /**
+     * Ensures database is clean after each test to prevent data pollution
+     */
+    @AfterEach
+    void tearDown() {
+        cleanupTestData();
+    }
 
     /**
      * Validates that a request returns a successful response (2xx status)
