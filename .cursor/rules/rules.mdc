@@ -10,6 +10,8 @@ alwaysApply: true
 - Consider best practices for code quality, maintainability, and security.
 - Always do a sanity check after making changes.
 - Consider technical debt and future-proofing in all decisions.
+- Do not add inline documentation or JavaDoc comments unless explicitly requested
+- Keep code changes minimal without adding explanatory comments
 
 ## Test Structure and Naming Conventions
 

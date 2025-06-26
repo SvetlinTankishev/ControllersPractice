@@ -32,6 +32,41 @@ public class CarRestController {
                   .orElseThrow(() -> new NoSuchElementException("Car not found with id: " + id));
     }
 
+    @RequestMapping(value = "/{id}", method = RequestMethod.HEAD)
+    public ResponseEntity<Void> checkCarExists(@PathVariable("id") Long id) {
+        Optional<Car> car = carService.getById(id);
+        if (car.isPresent()) {
+            return ResponseEntity.ok()
+                    .header("X-Resource-Count", "1")
+                    .header("X-Last-Modified", car.get().getUpdatedAt() != null ? 
+                            car.get().getUpdatedAt().toString() : "")
+                    .build();
+        } else {
+            return ResponseEntity.notFound().build();
+        }
+    }
+
+    @RequestMapping(value = "/{id}", method = RequestMethod.OPTIONS)
+    public ResponseEntity<Void> getCarOptions(@PathVariable("id") Long id) {
+        return ResponseEntity.ok()
+                .header("Allow", "GET, POST, PUT, PATCH, DELETE, HEAD, OPTIONS")
+                .header("X-Resource-Type", "Car")
+                .header("X-API-Version", "1.0")
+                .header("X-Supported-Operations", "read, create, update, delete")
+                .build();
+    }
+
+    @RequestMapping(method = RequestMethod.OPTIONS)
+    public ResponseEntity<Void> getCarsCollectionOptions() {
+        return ResponseEntity.ok()
+                .header("Allow", "GET, POST, OPTIONS")
+                .header("X-Resource-Type", "Car Collection")
+                .header("X-API-Version", "1.0")
+                .header("X-Supported-Operations", "list, create, search")
+                .header("X-Pagination-Supported", "true")
+                .build();
+    }
+
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     public ResponseEntity<Car> addCar(@Valid @RequestBody CarDto dto) {

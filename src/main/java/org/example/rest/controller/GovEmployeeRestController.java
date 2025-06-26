@@ -32,6 +32,41 @@ public class GovEmployeeRestController {
                       .orElseThrow(() -> new NoSuchElementException("Employee not found with id: " + id));
     }
 
+    @RequestMapping(value = "/{id}", method = RequestMethod.HEAD)
+    public ResponseEntity<Void> checkEmployeeExists(@PathVariable("id") Long id) {
+        Optional<GovEmployee> employee = govEmployeeService.getById(id);
+        if (employee.isPresent()) {
+            return ResponseEntity.ok()
+                    .header("X-Resource-Count", "1")
+                    .header("X-Last-Modified", employee.get().getUpdatedAt() != null ? 
+                            employee.get().getUpdatedAt().toString() : "")
+                    .build();
+        } else {
+            return ResponseEntity.notFound().build();
+        }
+    }
+
+    @RequestMapping(value = "/{id}", method = RequestMethod.OPTIONS)
+    public ResponseEntity<Void> getEmployeeOptions(@PathVariable("id") Long id) {
+        return ResponseEntity.ok()
+                .header("Allow", "GET, POST, PUT, PATCH, DELETE, HEAD, OPTIONS")
+                .header("X-Resource-Type", "GovEmployee")
+                .header("X-API-Version", "1.0")
+                .header("X-Supported-Operations", "read, create, update, delete")
+                .build();
+    }
+
+    @RequestMapping(method = RequestMethod.OPTIONS)
+    public ResponseEntity<Void> getEmployeesCollectionOptions() {
+        return ResponseEntity.ok()
+                .header("Allow", "GET, POST, OPTIONS")
+                .header("X-Resource-Type", "GovEmployee Collection")
+                .header("X-API-Version", "1.0")
+                .header("X-Supported-Operations", "list, create, search")
+                .header("X-Pagination-Supported", "true")
+                .build();
+    }
+
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     public ResponseEntity<GovEmployee> addEmployee(@Valid @RequestBody GovEmployeeDto dto) {

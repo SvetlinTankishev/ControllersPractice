@@ -32,6 +32,41 @@ public class AnimalRestController {
                      .orElseThrow(() -> new NoSuchElementException("Animal not found with id: " + id));
     }
 
+    @RequestMapping(value = "/{id}", method = RequestMethod.HEAD)
+    public ResponseEntity<Void> checkAnimalExists(@PathVariable("id") Long id) {
+        Optional<Animal> animal = animalService.getById(id);
+        if (animal.isPresent()) {
+            return ResponseEntity.ok()
+                    .header("X-Resource-Count", "1")
+                    .header("X-Last-Modified", animal.get().getUpdatedAt() != null ? 
+                            animal.get().getUpdatedAt().toString() : "")
+                    .build();
+        } else {
+            return ResponseEntity.notFound().build();
+        }
+    }
+
+    @RequestMapping(value = "/{id}", method = RequestMethod.OPTIONS)
+    public ResponseEntity<Void> getAnimalOptions(@PathVariable("id") Long id) {
+        return ResponseEntity.ok()
+                .header("Allow", "GET, POST, PUT, PATCH, DELETE, HEAD, OPTIONS")
+                .header("X-Resource-Type", "Animal")
+                .header("X-API-Version", "1.0")
+                .header("X-Supported-Operations", "read, create, update, delete")
+                .build();
+    }
+
+    @RequestMapping(method = RequestMethod.OPTIONS)
+    public ResponseEntity<Void> getAnimalsCollectionOptions() {
+        return ResponseEntity.ok()
+                .header("Allow", "GET, POST, OPTIONS")
+                .header("X-Resource-Type", "Animal Collection")
+                .header("X-API-Version", "1.0")
+                .header("X-Supported-Operations", "list, create, search")
+                .header("X-Pagination-Supported", "true")
+                .build();
+    }
+
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     public ResponseEntity<Animal> addAnimal(@Valid @RequestBody AnimalDto dto) {

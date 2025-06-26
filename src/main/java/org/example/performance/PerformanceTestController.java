@@ -5,6 +5,16 @@ import org.springframework.http.ResponseEntity;
 
 /**
  * Controller for performance testing and comparison endpoints.
+ * 
+ * IMPORTANT ARCHITECTURAL DIFFERENCES:
+ * - REST API includes HTTP-specific methods (HEAD, OPTIONS) that have no Action equivalent
+ * - Action architecture focuses on business operations, not HTTP protocol features
+ * - HEAD/OPTIONS testing only applies to REST; Actions test equivalent business logic
+ * 
+ * COMPARISON SCOPE:
+ * ✅ Tested: GET, POST, PUT/PATCH, DELETE, SEARCH, PAGINATION
+ * ✅ REST-only: HEAD (existence check), OPTIONS (method discovery)
+ * ⚠️  Note: Action architecture achieves similar goals through business operations
  */
 @RestController
 @RequestMapping("/performance")
