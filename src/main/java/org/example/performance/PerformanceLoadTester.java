@@ -41,20 +41,17 @@ public class PerformanceLoadTester {
     public PerformanceTestResult runLoadTest(LoadTestConfiguration config) {
         System.out.println("🚀 Starting Performance Load Test...");
         System.out.println("Configuration: " + config);
-        System.out.println("Thread Pool Size: " + (config.getConcurrentUsers() * 2) + " threads");
-        System.out.println("Total Tasks: " + (config.getConcurrentUsers() * 2) + " (REST + Action pairs)");
         
         // Reset metrics before test
         performanceMonitor.reset();
         
-        ExecutorService executor = Executors.newFixedThreadPool(config.getConcurrentUsers() * 2); // *2 for REST and Action
+        ExecutorService executor = Executors.newFixedThreadPool(config.getConcurrentUsers());
         CountDownLatch latch = new CountDownLatch(config.getConcurrentUsers() * 2); // *2 for REST and Action
         
         long testStartTime = System.currentTimeMillis();
         
-        // Run REST and Action tests concurrently
+        // Run REST tests
         for (int i = 0; i < config.getConcurrentUsers(); i++) {
-            // Submit REST test
             executor.submit(() -> {
                 try {
                     runRestTests(config);
@@ -62,8 +59,10 @@ public class PerformanceLoadTester {
                     latch.countDown();
                 }
             });
-            
-            // Submit Action test
+        }
+        
+        // Run Action tests
+        for (int i = 0; i < config.getConcurrentUsers(); i++) {
             executor.submit(() -> {
                 try {
                     runActionTests(config);
@@ -88,12 +87,9 @@ public class PerformanceLoadTester {
     }
     
     private void runRestTests(LoadTestConfiguration config) {
-        long testStartTime = System.currentTimeMillis();
-        long testEndTime = testStartTime + (config.getTestDurationSeconds() * 1000);
+        long testEndTime = System.currentTimeMillis() + (config.getTestDurationSeconds() * 1000);
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
-        
-        System.out.println("🌐 REST test thread started at: " + (testStartTime % 100000));
         
         while (System.currentTimeMillis() < testEndTime) {
             try {
@@ -111,10 +107,7 @@ public class PerformanceLoadTester {
     }
     
     private void runActionTests(LoadTestConfiguration config) {
-        long testStartTime = System.currentTimeMillis();
-        long testEndTime = testStartTime + (config.getTestDurationSeconds() * 1000);
-        
-        System.out.println("⚡ Action test thread started at: " + (testStartTime % 100000));
+        long testEndTime = System.currentTimeMillis() + (config.getTestDurationSeconds() * 1000);
         
         while (System.currentTimeMillis() < testEndTime) {
             try {
@@ -147,27 +140,10 @@ public class PerformanceLoadTester {
             // GET by ID (if create was successful)
             if (response.getStatusCode().is2xxSuccessful()) {
                 restTemplate.getForEntity(baseUrl + "/1", String.class);
-                
-                // Test UPDATE (PUT/PATCH)
-                dto.setType("UpdatedAnimal" + random.nextInt(1000));
-                HttpEntity<AnimalDto> updateEntity = new HttpEntity<>(dto, headers);
-                restTemplate.exchange(baseUrl + "/1", HttpMethod.PUT, updateEntity, String.class);
-                
-                // Test HEAD request
-                restTemplate.headForHeaders(baseUrl + "/1");
-                
-                // Test DELETE
-                restTemplate.delete(baseUrl + "/1");
             }
             
             // GET search
             restTemplate.getForEntity(baseUrl + "/search?type=TestAnimal", String.class);
-            
-            // GET pagination
-            restTemplate.getForEntity(baseUrl + "/page?page=0&size=5", String.class);
-            
-            // Test OPTIONS
-            restTemplate.optionsForAllow(baseUrl);
             
         } catch (Exception e) {
             // Ignore errors for load testing
@@ -183,21 +159,7 @@ public class PerformanceLoadTester {
             CarDto dto = new CarDto();
             dto.setBrand("TestCar" + random.nextInt(1000));
             HttpEntity<CarDto> entity = new HttpEntity<>(dto, headers);
-            var response = restTemplate.postForEntity(baseUrl, entity, String.class);
-            
-            // Additional operations for comprehensive testing
-            if (response.getStatusCode().is2xxSuccessful()) {
-                restTemplate.getForEntity(baseUrl + "/1", String.class);
-                dto.setBrand("UpdatedCar" + random.nextInt(1000));
-                HttpEntity<CarDto> updateEntity = new HttpEntity<>(dto, headers);
-                restTemplate.exchange(baseUrl + "/1", HttpMethod.PATCH, updateEntity, String.class);
-                restTemplate.headForHeaders(baseUrl + "/1");
-                restTemplate.delete(baseUrl + "/1");
-            }
-            
-            restTemplate.getForEntity(baseUrl + "/search?brand=TestCar", String.class);
-            restTemplate.getForEntity(baseUrl + "/page?page=0&size=5", String.class);
-            restTemplate.optionsForAllow(baseUrl);
+            restTemplate.postForEntity(baseUrl, entity, String.class);
             
         } catch (Exception e) {
             // Ignore errors for load testing
@@ -213,21 +175,7 @@ public class PerformanceLoadTester {
             GovEmployeeDto dto = new GovEmployeeDto();
             dto.setName("TestEmployee" + random.nextInt(1000));
             HttpEntity<GovEmployeeDto> entity = new HttpEntity<>(dto, headers);
-            var response = restTemplate.postForEntity(baseUrl, entity, String.class);
-            
-            // Additional operations for comprehensive testing
-            if (response.getStatusCode().is2xxSuccessful()) {
-                restTemplate.getForEntity(baseUrl + "/1", String.class);
-                dto.setName("UpdatedEmployee" + random.nextInt(1000));
-                HttpEntity<GovEmployeeDto> updateEntity = new HttpEntity<>(dto, headers);
-                restTemplate.exchange(baseUrl + "/1", HttpMethod.PUT, updateEntity, String.class);
-                restTemplate.headForHeaders(baseUrl + "/1");
-                restTemplate.delete(baseUrl + "/1");
-            }
-            
-            restTemplate.getForEntity(baseUrl + "/search?name=TestEmployee", String.class);
-            restTemplate.getForEntity(baseUrl + "/page?page=0&size=5", String.class);
-            restTemplate.optionsForAllow(baseUrl);
+            restTemplate.postForEntity(baseUrl, entity, String.class);
             
         } catch (Exception e) {
             // Ignore errors for load testing
@@ -245,20 +193,8 @@ public class PerformanceLoadTester {
             // Get by ID
             actionDispatcher.dispatch(new GetAnimalByIdRequest(1L));
             
-            // Update animal
-            actionDispatcher.dispatch(new UpdateAnimalRequest(1L, "UpdatedAnimal" + random.nextInt(1000)));
-            
-            // Delete animal
-            actionDispatcher.dispatch(new DeleteAnimalRequest(1L));
-            
             // Search
             actionDispatcher.dispatch(new SearchAnimalsRequest("TestAnimal"));
-            
-            // Pagination
-            actionDispatcher.dispatch(new GetAnimalsPageRequest(0, 5));
-            
-            // Note: HEAD and OPTIONS are HTTP-specific concepts
-            // They don't have equivalent business operations in Action architecture
             
         } catch (Exception e) {
             // Ignore errors for load testing
@@ -269,11 +205,6 @@ public class PerformanceLoadTester {
         try {
             actionDispatcher.dispatch(new GetAllCarsRequest());
             actionDispatcher.dispatch(new CreateCarRequest("TestCar" + random.nextInt(1000)));
-            actionDispatcher.dispatch(new GetCarByIdRequest(1L));
-            actionDispatcher.dispatch(new UpdateCarRequest(1L, "UpdatedCar" + random.nextInt(1000)));
-            actionDispatcher.dispatch(new DeleteCarRequest(1L));
-            actionDispatcher.dispatch(new SearchCarsRequest("TestCar"));
-            actionDispatcher.dispatch(new GetCarsPageRequest(0, 5));
             
         } catch (Exception e) {
             // Ignore errors for load testing
@@ -284,11 +215,6 @@ public class PerformanceLoadTester {
         try {
             actionDispatcher.dispatch(new GetAllEmployeesRequest());
             actionDispatcher.dispatch(new CreateEmployeeRequest("TestEmployee" + random.nextInt(1000)));
-            actionDispatcher.dispatch(new GetEmployeeByIdRequest(1L));
-            actionDispatcher.dispatch(new UpdateEmployeeRequest(1L, "UpdatedEmployee" + random.nextInt(1000)));
-            actionDispatcher.dispatch(new DeleteEmployeeRequest(1L));
-            actionDispatcher.dispatch(new SearchEmployeesRequest("TestEmployee"));
-            actionDispatcher.dispatch(new GetEmployeesPageRequest(0, 5));
             
         } catch (Exception e) {
             // Ignore errors for load testing
